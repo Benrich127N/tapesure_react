@@ -1,17 +1,13 @@
-// src/pages/Home.jsx
 const Home = () => {
   return (
-    <section className="flex flex-col items-center justify-center text-center py-20 px-4">
-      <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
-        Welcome to <span className="text-blue-600">Tapsure</span>
+    <section className="flex flex-col items-center justify-center min-h-[80vh] text-center p-6">
+      <h1 className="text-4xl font-bold text-purple-700 mb-4">
+        Welcome to Tapsure
       </h1>
-      <p className="text-lg text-gray-600 max-w-2xl mb-8">
-        Tapsure helps you manage your tailoring business with ease — track
-        outfits, orders, and clients effortlessly.
+      <p className="text-gray-600 max-w-xl">
+        Streamline your tailoring and project management with an elegant dashboard
+        that keeps everything organized.
       </p>
-      <button className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition">
-        Get Started
-      </button>
     </section>
   );
 };

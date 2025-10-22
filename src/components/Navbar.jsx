@@ -1,14 +1,13 @@
-// src/components/Navbar.jsx
 import { Link } from "react-router-dom";
 
 const Navbar = () => {
   return (
-    <nav className="bg-white shadow-md py-4 px-8 flex justify-between items-center">
-      <h1 className="text-2xl font-bold text-blue-600">Tapsure</h1>
-      <ul className="flex space-x-6">
-        <li><Link to="/" className="hover:text-blue-600">Home</Link></li>
-        <li><Link to="/dashboard" className="hover:text-blue-600">Dashboard</Link></li>
-      </ul>
+    <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center">
+      <h1 className="text-xl font-semibold text-purple-700">Tapsure</h1>
+      <div className="space-x-4">
+        <Link to="/" className="text-gray-700 hover:text-purple-600">Home</Link>
+        <Link to="/dashboard" className="text-gray-700 hover:text-purple-600">Dashboard</Link>
+      </div>
     </nav>
   );
 };

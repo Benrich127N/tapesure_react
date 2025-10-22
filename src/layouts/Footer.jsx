@@ -1,10 +1,7 @@
-// src/layouts/Footer.jsx
-const Footer = () => {
-  return (
-    <footer className="bg-gray-900 text-gray-300 text-center py-6 mt-10">
-      <p className="text-sm">© {new Date().getFullYear()} Tapsure. All rights reserved.</p>
-    </footer>
-  );
-};
+const Footer = () => (
+  <footer className="bg-white shadow-inner py-4 text-center text-gray-500 text-sm">
+    © 2025 Tapsure. All rights reserved.
+  </footer>
+);
 
 export default Footer;
