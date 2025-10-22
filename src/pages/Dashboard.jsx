@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import DashboardLayout from "../layouts/DashboardLayout";
-import StatCard from "../components/StatCard";
+import StatCard from "../components/Card";
 import ProjectTable from "../components/ProjectTable";
 
 const Dashboard = () => {
