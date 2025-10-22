@@ -1,23 +1,21 @@
 // src/pages/Dashboard.jsx
+import DashboardLayout from "../layouts/DashboardLayout";
+import StatCard from "../components/StatCard";
+import ProjectTable from "../components/ProjectTable";
+
 const Dashboard = () => {
   return (
-    <div className="p-8">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-700">Dashboard Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-          <h3 className="font-semibold text-lg mb-2">Total Clients</h3>
-          <p className="text-3xl font-bold text-blue-600">24</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-          <h3 className="font-semibold text-lg mb-2">Pending Orders</h3>
-          <p className="text-3xl font-bold text-yellow-500">8</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-          <h3 className="font-semibold text-lg mb-2">Completed</h3>
-          <p className="text-3xl font-bold text-green-500">42</p>
-        </div>
+    <DashboardLayout>
+      <h1 className="text-2xl font-bold mb-6">Project Overview</h1>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard title="Total Project" value="6,784" change="+150 today ↑" trendColor="text-green-600" />
+        <StatCard title="In Progress" value="4,412" change="+150 today ↑" trendColor="text-blue-600" />
+        <StatCard title="Completed" value="1,920" change="+150 today ↑" trendColor="text-green-600" />
+        <StatCard title="Blocked" value="140" change="+50 today ↓" trendColor="text-red-600" />
       </div>
-    </div>
+
+      <ProjectTable />
+    </DashboardLayout>
   );
 };
 
