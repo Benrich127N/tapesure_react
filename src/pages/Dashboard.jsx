@@ -1,21 +1,44 @@
-// src/pages/Dashboard.jsx
-import DashboardLayout from "../layouts/DashboardLayout";
-import StatCard from "../components/Card";
-import ProjectTable from "../components/ProjectTable";
+import Sidebar from "../components/Sidebar";
 
 const Dashboard = () => {
   return (
-    <DashboardLayout>
-      <h1 className="text-2xl font-bold mb-6">Project Overview</h1>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard title="Total Project" value="6,784" change="+150 today ↑" trendColor="text-green-600" />
-        <StatCard title="In Progress" value="4,412" change="+150 today ↑" trendColor="text-blue-600" />
-        <StatCard title="Completed" value="1,920" change="+150 today ↑" trendColor="text-green-600" />
-        <StatCard title="Blocked" value="140" change="+50 today ↓" trendColor="text-red-600" />
-      </div>
+    // Main background set to black
+    <div className="flex min-h-screen bg-black"> 
+      <Sidebar /> 
 
-      <ProjectTable />
-    </DashboardLayout>
+      {/* Main Content */}
+      
+      <div className="flex-1 p-8">
+        {/* Main heading text set to white */}
+        <h1 className="text-3xl font-bold text-white mb-8">Dashboard Overview</h1>
+
+        {/* Dashboard Cards */}
+        <div className="card grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Card 1: Uses a dark gray background (bg-gray-900) */}
+          <div className="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-800"> 
+            <h2 className="text-xl font-semibold text-gray-300 mb-2">Projects</h2>
+            <p className="text-3xl font-bold text-indigo-400">12</p>
+            <p className="text-gray-500">Active Projects</p>
+          </div>
+          
+          {/* Card 2 */}
+          <div className="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-300 mb-2">Clients</h2>
+            <p className="text-3xl font-bold text-green-400">8</p>
+            <p className="text-gray-500">Active Clients</p>
+          </div>
+          
+          {/* Card 3 */}
+          <div className="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-300 mb-2">Invoices</h2>
+            <p className="text-3xl font-bold text-red-400">5</p>
+            <p className="text-gray-500">Pending</p>
+          </div>
+          
+        </div>
+      </div>
+    </div>
   );
 };
 
