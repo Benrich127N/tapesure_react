@@ -10,11 +10,11 @@ import Footer from "./components/Footer";
 function App() {
   return (
     <Router>
-      <div className="flex h-screen bg-gray-100 text-gray-900">
+      <div className="flex h-screen bg-black text-gray-900">
         <Sidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <Topbar />
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-6 overflow-auto bg-black">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
