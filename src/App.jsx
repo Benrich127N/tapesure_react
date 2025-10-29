@@ -1,22 +1,24 @@
-// src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
+import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
-import Navbar from "./components/Navbar";
-import Footer from "./layouts/Footer";
+import Projects from "./pages/Projects";
+import Clients from "./pages/Clients";
+import Invoices from "./pages/Invoices";
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <main className="flex-grow">
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <main className="flex-grow p-6">
           <Routes>
-            <Route path="/" element={<Dashboard  />} />
-            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/invoices" element={<Invoices />} />
           </Routes>
         </main>
-        <Footer />
+        <footer/>
       </div>
     </Router>
   );
