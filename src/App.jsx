@@ -6,6 +6,9 @@ import Projects from "./pages/Projects";
 import Clients from "./pages/Clients";
 import Invoices from "./pages/Invoices";
 import Footer from "./components/Footer";
+import Outfits from "./pages/Outfits";
+import Settings from "./pages/Settings";
+
 
 function App() {
   return (
@@ -17,9 +20,10 @@ function App() {
           <main className="flex-1 p-6 overflow-auto bg-black">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route path="/outfits" element={<Outfits />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/invoices" element={<Invoices />} />
+               <Route path="/settings" element={<Settings />} />
             </Routes>
           </main>
           <Footer />
