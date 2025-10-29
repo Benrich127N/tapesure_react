@@ -8,7 +8,7 @@ const Invoices = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-black text-white p-8">
+    <div className="flex h-screen bg-black text-white p-8">
       <div className="flex-1">
         <h1 className="text-3xl font-bold mb-8">Invoices</h1>
 

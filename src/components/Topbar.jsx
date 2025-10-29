@@ -3,7 +3,7 @@ import { FaBell, FaPlus } from "react-icons/fa";
 
 const Topbar = () => {
   return (
-    <header className="flex justify-between items-center bg-white shadow px-6 py-4">
+    <header className="flex justify-between items-center bg-slate-800 shadow px-6 py-4">
       <input
         type="text"
         placeholder="Search..."

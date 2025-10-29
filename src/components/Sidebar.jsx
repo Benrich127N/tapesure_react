@@ -35,7 +35,7 @@ const Sidebar = () => {
   return (
     <div
       className={`
-        ${primaryBg} flex flex-col min-h-screen transition-all duration-300 shadow-2xl
+        ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
         ${collapsed ? "w-20" : "w-64"}
       `}
     >
@@ -43,7 +43,7 @@ const Sidebar = () => {
       <div className="flex items-center justify-between h-20 border-b border-gray-900 px-4">
         {!collapsed && (
           <span className="text-xl font-bold text-white tracking-wider">
-            Axzar<span className="text-indigo-400">Panel</span>
+            Tape<span className="text-indigo-400">Sure</span>
           </span>
         )}
         <button
