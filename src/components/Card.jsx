@@ -1,12 +1,13 @@
-// src/components/StatCard.jsx
-const StatCard = ({ title, value, change, trendColor }) => {
+import React from "react";
+import theme from "../theme";
+
+const Card = ({ title, children, className = "" }) => {
   return (
-    <div className="bg-white rounded-xl shadow p-5">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <h3 className="text-3xl font-bold mt-2">{value}</h3>
-      <p className={`text-sm mt-1 ${trendColor}`}>{change}</p>
+    <div className={`${theme.colors.background} ${theme.card} ${className}`}>
+      {title && <h2 className="text-xl font-bold text-white mb-6">{title}</h2>}
+      {children}
     </div>
   );
 };
 
-export default StatCard;
+export default Card;
