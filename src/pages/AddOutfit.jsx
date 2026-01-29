@@ -3,18 +3,22 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../../firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ArrowLeft, Save, Scissors, Calendar, User, DollarSign, FileText } from "lucide-react";
+import { ArrowLeft, Save, Scissors, Calendar, User, DollarSign, FileText, Tag } from "lucide-react";
+
+
+
+
 
 const AddOutfit = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   
-  // Form State
   const [formData, setFormData] = useState({
     clientName: "",
     outfitType: "",
     dueDate: "",
     amount: "",
+    status: "Pending", // Default status
     notes: ""
   });
 
@@ -27,17 +31,17 @@ const AddOutfit = () => {
         userId: auth.currentUser.uid,
         clientName: formData.clientName,
         outfitType: formData.outfitType,
-        status: "In Progress", // Default status as requested
+        status: formData.status, 
         dueDate: formData.dueDate,
         amount: Number(formData.amount),
         notes: formData.notes,
         createdAt: serverTimestamp()
       });
 
-      navigate("/outfits"); // Go back to list after success
+      navigate("/outfits");
     } catch (error) {
       console.error("Error adding outfit:", error);
-      alert("Failed to save outfit. Please try again.");
+      alert("Failed to save outfit.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +49,6 @@ const AddOutfit = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* Header with Back Button */}
       <div className="flex items-center justify-between">
         <button 
           onClick={() => navigate("/outfits")}
@@ -68,7 +71,6 @@ const AddOutfit = () => {
             <input
               required
               type="text"
-              placeholder="e.g. Sarah Johnson"
               className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               onChange={(e) => setFormData({...formData, clientName: e.target.value})}
             />
@@ -82,10 +84,27 @@ const AddOutfit = () => {
             <input
               required
               type="text"
-              placeholder="e.g. Ankara Gown"
               className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               onChange={(e) => setFormData({...formData, outfitType: e.target.value})}
             />
+          </div>
+
+          {/* Status Picker - NEW */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+              <Tag size={16} /> Order Status
+            </label>
+            <select
+              value={formData.status}
+              className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition appearance-none"
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+            >
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Ready">Ready</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Delayed">Delayed</option>
+            </select>
           </div>
 
           {/* Due Date */}
@@ -109,7 +128,6 @@ const AddOutfit = () => {
             <input
               required
               type="number"
-              placeholder="50000"
               className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               onChange={(e) => setFormData({...formData, amount: e.target.value})}
             />
@@ -119,30 +137,27 @@ const AddOutfit = () => {
         {/* Notes */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-            <FileText size={16} /> Additional Notes
+            <FileText size={16} /> Notes
           </label>
           <textarea
-            rows="4"
-            placeholder="Fabric details, measurements adjustments, special requests..."
+            rows="3"
             className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
             onChange={(e) => setFormData({...formData, notes: e.target.value})}
           ></textarea>
         </div>
 
-        {/* Action Button */}
-        <div className="pt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all 
-              ${loading ? 'bg-gray-800 text-gray-500' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95'}`}
-          >
-            {loading ? "Processing..." : <><Save size={20} /> Create Order</>}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all 
+            ${loading ? 'bg-gray-800 text-gray-500' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95'}`}
+        >
+          {loading ? "Saving..." : <><Save size={20} /> Save Outfit Order</>}
+        </button>
       </form>
     </div>
   );
-};
+
+  };
 
 export default AddOutfit;
