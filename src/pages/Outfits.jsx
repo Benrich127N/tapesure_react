@@ -114,6 +114,7 @@ const Outfits = () => {
                 <th className="text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
                 <th className="text-xs font-semibold text-gray-400 pb-3">TYPE</th>
                 <th className="text-xs font-semibold text-gray-400 pb-3">STATUS</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">AMOUNT</th> {/* New Column */}
                 <th className="text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
                 <th className="text-xs font-semibold text-gray-400 pb-3">ACTIONS</th>
               </tr>
@@ -127,7 +128,7 @@ const Outfits = () => {
                 </tr>
               ) : outfits.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-8 text-center text-gray-500">
+                  <td colSpan="6" className="py-8 text-center text-gray-500">
                     No outfits found. Click "+ New Outfit" to start.
                   </td>
                 </tr>
@@ -142,6 +143,11 @@ const Outfits = () => {
                         {outfit.status}
                       </span>
                     </td>
+
+
+      <td className="py-4 text-sm font-semibold text-indigo-400">
+        ₦{Number(outfit.amount || 0).toLocaleString()}
+      </td>
                     <td className="py-4 text-sm text-gray-400">{outfit.dueDate}</td>
                     <td className="py-4 text-sm text-gray-400">
                       <div className="flex items-center gap-3">
