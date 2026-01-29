@@ -1,6 +1,9 @@
 // src/components/Sidebar.jsx
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
+import { signOut } from "firebase/auth";
+import {auth} from "../../firebase"
+
 import {
   Home,
   Users,
@@ -23,6 +26,22 @@ const navItems = [
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+
+
+  const navigate = useNavigate(); // <-- Place it here
+
+  // --- LOGOUT LOGIC START ---
+  const handleLogout = async (e) => {
+    e.preventDefault(); 
+    try {
+      await signOut(auth);
+      console.log("Logged out successfully");
+      navigate("/login"); 
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
@@ -79,19 +98,20 @@ const Sidebar = () => {
         ))}
 
         {/* Logout Section */}
-        <div className="pt-4 mt-4 border-t border-gray-800">
-          <a
-            href="#"
-            className={`
-              flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200
-              ${defaultLink}
-            `}
-            title={collapsed ? "Logout" : ""}
-          >
-            <LogOut className="h-5 w-5" />
-            {!collapsed && <span className="ml-3">Logout</span>}
-          </a>
-        </div>
+      <div className="pt-4 mt-4 border-t border-gray-800">
+  <a
+    href="javascript:void(0)" 
+    onClick={handleLogout}
+    className={`
+      flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200
+      ${defaultLink}
+    `}
+    title={collapsed ? "Logout" : ""}
+  >
+    <LogOut className="h-5 w-5 text-red-500" />
+    {!collapsed && <span className="ml-3">Logout</span>}
+  </a>
+</div>
       </nav>
 
       {/* User Profile Footer */}
