@@ -8,6 +8,7 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Footer from "./components/Footer";
 
+import Onboarding from "./pages/Onboarding"; 
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Clients from "./pages/Clients";
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/onboarding" element={<Onboarding />} />
               </Routes>
             </main>
             <Footer />

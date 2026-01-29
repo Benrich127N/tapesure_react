@@ -1,34 +1,40 @@
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, db } from "../../firebase"; 
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Import Firestore functions
+import { doc, setDoc, getDoc,serverTimestamp } from "firebase/firestore"; // Import Firestore functions
 import { LogIn } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const handleLogin = async () => {
-    try {
-      // 1. Trigger the Google Login
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+  // 3. Initialize the navigate function
+  const navigate = useNavigate();
+const handleLogin = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    const userRef = doc(db, "users", user.uid);
 
-      // 2. Reference the document in the 'users' collection using the UID
-      const userRef = doc(db, "users", user.uid);
+    // Use { merge: true } so we don't delete existing shopName or phone
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      fullName: user.displayName, // Mapping Google 'name' to your 'fullName'
+      photoURL: user.photoURL,
+      lastLogin: serverTimestamp(),
+      // Only set these if the document is brand new
+      role: "tailor",
+    }, { merge: true });
 
-      // 3. Create or Update the user document
-      await setDoc(userRef, {
-        uid: user.uid,
-        name: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        lastLogin: serverTimestamp(), // Records when they logged in
-        role: "tailor" // Default role for your Tapsure app
-      }, { merge: true }); // Merge: true prevents overwriting existing data
-
-      console.log("User synced to Firestore successfully!");
-      
-    } catch (error) {
-      console.error("Login/Sync Error:", error.message);
+    // Check if we need to send them to onboarding
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.data()?.onboardingCompleted) {
+      navigate("/onboarding"); 
+    } else {
+      navigate("/"); // Go to Dashboard
     }
-  };
+  } catch (error) {
+    console.error("Login error", error);
+  }
+};
 
   return (
     <div className="h-screen flex items-center justify-center bg-black p-4">
