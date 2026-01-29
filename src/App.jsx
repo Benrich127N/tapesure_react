@@ -16,6 +16,8 @@ import Invoices from "./pages/Invoices";
 import Outfits from "./pages/Outfits";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import AddOutfit from "./pages/AddOutfit";
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -55,6 +57,7 @@ function App() {
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/outfits/new" element={<AddOutfit />} />
               </Routes>
             </main>
             <Footer />

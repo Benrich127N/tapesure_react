@@ -1,31 +1,68 @@
-import React from "react";
-import { CheckCircle, Clock, XCircle, Package } from "lucide-react";
+import React, { useEffect, useState } from "react"; // Fixed: Uncommented and added imports
+import { db, auth } from "../../firebase"; 
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { CheckCircle, Clock, XCircle, Package, Edit2, Eye } from "lucide-react";
+// Add this to Outfits.jsx
+import { useNavigate } from "react-router-dom";
 
 const Outfits = () => {
+  const [outfits, setOutfits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+
+  // Stats logic calculated from real Firestore data
+  const stats = {
+    total: outfits.length,
+    inProgress: outfits.filter(o => o.status === "In Progress").length,
+    delivered: outfits.filter(o => o.status === "Delivered").length,
+    delayed: outfits.filter(o => o.status === "Delayed").length,
+  };
+
   const outfitStats = [
-    { title: "Total Outfits", value: "6,784", color: "text-indigo-400", bg: "bg-indigo-900/20", sub: "+15 today" },
-    { title: "In Progress", value: "4,412", color: "text-yellow-400", bg: "bg-yellow-900/20", sub: "+4 today" },
-    { title: "Delivered", value: "1,920", color: "text-green-400", bg: "bg-green-900/20", sub: "+2 today" },
-    { title: "Delayed", value: "329", color: "text-red-400", bg: "bg-red-900/20", sub: "+1 today" },
+    { title: "Total Outfits", value: stats.total, color: "text-indigo-400", bg: "bg-indigo-900/20", sub: "All time" },
+    { title: "In Progress", value: stats.inProgress, color: "text-yellow-400", bg: "bg-yellow-900/20", sub: "Active" },
+    { title: "Delivered", value: stats.delivered, color: "text-green-400", bg: "bg-green-900/20", sub: "Completed" },
+    { title: "Delayed", value: stats.delayed, color: "text-red-400", bg: "bg-red-900/20", sub: "Urgent" },
   ];
 
-  const outfitCards = [
-    { client: "Sarah Johnson", type: "Ankara Gown", status: "In Progress", color: "yellow", progress: "65%", due: "Oct 25" },
-    { client: "John Doe", type: "Senator Suit", status: "Delivered", color: "green", progress: "100%", due: "Oct 15" },
-    { client: "Chika Ndu", type: "Wedding Dress", status: "Delayed", color: "red", progress: "40%", due: "Oct 30" },
-    { client: "Mary Afolabi", type: "Office Skirt", status: "Pending", color: "gray", progress: "0%", due: "Oct 28" },
-  ];
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const q = query(
+      collection(db, "outfits"),
+      where("userId", "==", auth.currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setOutfits(data);
+      setLoading(false); // Fixed: 'loading' is now used
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Delivered":
-        return <CheckCircle className="w-4 h-4" />;
-      case "In Progress":
-        return <Clock className="w-4 h-4" />;
-      case "Delayed":
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <Package className="w-4 h-4" />;
+      case "Delivered": return <CheckCircle className="w-4 h-4" />;
+      case "In Progress": return <Clock className="w-4 h-4" />;
+      case "Delayed": return <XCircle className="w-4 h-4" />;
+      default: return <Package className="w-4 h-4" />;
+    }
+  };
+
+  // Helper to get colors based on status string
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Delivered": return "bg-green-900/30 text-green-400 border border-green-700";
+      case "In Progress": return "bg-yellow-900/30 text-yellow-400 border border-yellow-700";
+      case "Delayed": return "bg-red-900/30 text-red-400 border border-red-700";
+      default: return "bg-gray-800 text-gray-400 border border-gray-700";
     }
   };
 
@@ -39,7 +76,9 @@ const Outfits = () => {
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-400">Today</p>
-          <p className="text-lg font-semibold text-white">Wednesday, Oct 29, 2025</p>
+          <p className="text-lg font-semibold text-white">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
         </div>
       </div>
 
@@ -63,38 +102,56 @@ const Outfits = () => {
       <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white">Recent Outfits</h2>
-          <button className="text-sm text-indigo-400 hover:text-indigo-300">View All →</button>
+          <button onClick={() => navigate("/outfits/new")} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition">
+            + New Outfit
+          </button>
         </div>
+        
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-left">
             <thead>
               <tr className="border-b border-gray-800">
-                <th className="text-left text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
-                <th className="text-left text-xs font-semibold text-gray-400 pb-3">TYPE</th>
-                <th className="text-left text-xs font-semibold text-gray-400 pb-3">STATUS</th>
-                <th className="text-left text-xs font-semibold text-gray-400 pb-3">PROGRESS</th>
-                <th className="text-left text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">TYPE</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">STATUS</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {outfitCards.map((outfit, index) => (
-                <tr key={index} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                  <td className="py-4 text-sm text-gray-300">{outfit.client}</td>
-                  <td className="py-4 text-sm text-gray-400">{outfit.type}</td>
-                  <td className="py-4">
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full 
-                      ${outfit.color === 'green' ? 'bg-green-900/30 text-green-400 border border-green-700' : ''}
-                      ${outfit.color === 'yellow' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700' : ''}
-                      ${outfit.color === 'red' ? 'bg-red-900/30 text-red-400 border border-red-700' : ''}
-                      ${outfit.color === 'gray' ? 'bg-gray-800 text-gray-400 border border-gray-700' : ''}`}>
-                      {getStatusIcon(outfit.status)}
-                      {outfit.status}
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="py-8 text-center text-gray-500">
+                    <div className="animate-pulse">Loading data from Firestore...</div>
                   </td>
-                  <td className="py-4 text-sm text-gray-400">{outfit.progress}</td>
-                  <td className="py-4 text-sm text-gray-400">{outfit.due}</td>
                 </tr>
-              ))}
+              ) : outfits.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="py-8 text-center text-gray-500">
+                    No outfits found. Click "+ New Outfit" to start.
+                  </td>
+                </tr>
+              ) : (
+                outfits.map((outfit) => (
+                  <tr key={outfit.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                    <td className="py-4 text-sm text-gray-300 font-medium">{outfit.clientName}</td>
+                    <td className="py-4 text-sm text-gray-400">{outfit.outfitType}</td>
+                    <td className="py-4">
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(outfit.status)}`}>
+                        {getStatusIcon(outfit.status)}
+                        {outfit.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-sm text-gray-400">{outfit.dueDate}</td>
+                    <td className="py-4 text-sm text-gray-400">
+                      <div className="flex items-center gap-3">
+                        <button className="hover:text-white"><Eye size={18} /></button>
+                        <button className="hover:text-indigo-400"><Edit2 size={18} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
