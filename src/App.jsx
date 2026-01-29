@@ -17,6 +17,7 @@ import Outfits from "./pages/Outfits";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import AddOutfit from "./pages/AddOutfit";
+import OutfitDetails from "./pages/OutfitDetails";
 
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/outfits/new" element={<AddOutfit />} />
+                <Route path="/outfits/:id" element={<OutfitDetails />} />
               </Routes>
             </main>
             <Footer />
