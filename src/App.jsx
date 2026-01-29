@@ -1,34 +1,64 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useState } from "react";
+
+import { auth } from "../firebase";
+
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
+import Footer from "./components/Footer";
+
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Clients from "./pages/Clients";
 import Invoices from "./pages/Invoices";
-import Footer from "./components/Footer";
 import Outfits from "./pages/Outfits";
 import Settings from "./pages/Settings";
-
+import Login from "./pages/Login";
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black text-white">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <Router>
-      <div className="flex h-screen bg-black text-gray-900">
-        <Sidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Topbar />
-          <main className="flex-1 p-6 overflow-auto bg-black">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/outfits" element={<Outfits />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/invoices" element={<Invoices />} />
-               <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </main>
-          <Footer />
+      {!user ? (
+        <Login />
+      ) : (
+        <div className="flex h-screen bg-black text-gray-900">
+          <Sidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <Topbar />
+            <main className="flex-1 p-6 overflow-auto bg-black">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/outfits" element={<Outfits />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
         </div>
-      </div>
+      )}
     </Router>
   );
 }
