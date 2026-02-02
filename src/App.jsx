@@ -18,6 +18,8 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import AddOutfit from "./pages/AddOutfit";
 import OutfitDetails from "./pages/OutfitDetails";
+import CalendarPage from "./pages/CalendarPage.jsx";
+
 
 
 function App() {
@@ -60,6 +62,7 @@ function App() {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/outfits/new" element={<AddOutfit />} />
                 <Route path="/outfits/:id" element={<OutfitDetails />} />
+                <Route path="/calendar" element={<CalendarPage />} />
               </Routes>
             </main>
             <Footer />

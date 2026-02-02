@@ -9,20 +9,33 @@ import {
 } from "firebase/firestore";
 import { CheckCircle, Clock, XCircle, Package, Edit2, Eye } from "lucide-react";
 // Add this to Outfits.jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const Outfits = () => {
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Stats logic calculated from real Firestore data
+ // 2. STATS should always reflect the TOTAL data (not filtered)
   const stats = {
     total: outfits.length,
-    inProgress: outfits.filter((o) => o.status === "In Progress").length,
+inProgress: outfits.filter((o) => ["In Progress", "Sewing", "Cutting", "Fitting"].includes(o.status)).length,
     delivered: outfits.filter((o) => o.status === "Delivered").length,
     delayed: outfits.filter((o) => o.status === "Delayed").length,
   };
+
+
+
+  // Inside your Outfits component...
+const searchQuery = searchParams.get("q")?.toLowerCase() || "";
+
+// 3. FILTER the list for the table based on the search bar
+  const filteredOutfits = outfits.filter(outfit => 
+    outfit.clientName?.toLowerCase().includes(searchQuery) ||
+    outfit.outfitType?.toLowerCase().includes(searchQuery) ||
+    outfit.status?.toLowerCase().includes(searchQuery)
+  );
 
   const outfitStats = [
     {
@@ -206,7 +219,7 @@ const Outfits = () => {
                   </td>
                 </tr>
               ) : (
-                outfits.map((outfit) => (
+               filteredOutfits.map((outfit) => (
                   <tr
                     key={outfit.id}
                     className="border-b border-gray-800 hover:bg-gray-800/50 transition"

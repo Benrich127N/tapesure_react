@@ -3,6 +3,9 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
 import { signOut } from "firebase/auth";
 import {auth} from "../../firebase"
+import { LayoutDashboard, Scissors, Calendar,  } from 'lucide-react';
+
+
 
 import {
   Home,
@@ -19,6 +22,7 @@ import {
 const navItems = [
   { name: "Dashboard", path: "/", icon: Home },
   { name: "Outfits", path: "/outfits", icon: Briefcase },
+  { name: "Calendar", path: "/calendar", icon: Calendar }, 
   { name: "Clients", path: "/clients", icon: Users },
   { name: "Invoices", path: "/invoices", icon: ClipboardList },
   { name: "Settings", path: "/settings", icon: Settings },
@@ -128,11 +132,11 @@ const Sidebar = () => {
           <>
             <div className="ml-3 flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                John Doe
-              </p>
-              <p className="text-xs text-gray-400 truncate">
-                john.doe@example.com
-              </p>
+  {auth.currentUser?.displayName || "Tailor"}
+</p>
+<p className="text-xs text-gray-400 truncate">
+  {auth.currentUser?.email || "Account"}
+</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400 ml-2" />
           </>
