@@ -1,40 +1,80 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { db, auth } from "../../firebase";
 import { Calendar, AlertCircle, DollarSign, Package, Users, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
+
+
 
 const Dashboard = () => {
+
+  const [outfits, setOutfits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+    if (!auth.currentUser) return;
+
+    // Fetch latest 10 outfits
+    const q = query(
+      collection(db, "outfits"),
+      where("userId", "==", auth.currentUser.uid),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setOutfits(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+
+  // --- Real-time Calculations ---
+  const totalOrders = outfits.length;
+  const pendingPayments = outfits.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const overdueCount = outfits.filter(o => o.status === "Delayed").length;
+  // Unique client names count
+  const uniqueClients = [...new Set(outfits.map(o => o.clientName))].length;
+
   // Stats Data
-  const stats = [
+const stats = [
     { 
       title: "Total Orders", 
-      value: "42", 
+      value: totalOrders, 
       icon: Package, 
       color: "text-indigo-400",
       bgColor: "bg-indigo-900/20",
-      change: "+8 this week"
+      change: "All time"
     },
     { 
       title: "Active Clients", 
-      value: "28", 
+      value: uniqueClients, 
       icon: Users, 
       color: "text-green-400",
       bgColor: "bg-green-900/20",
-      change: "+3 new"
+      change: "Unique names"
     },
     { 
-      title: "Pending Payments", 
-      value: "₦450K", 
+      title: "Expected Revenue", 
+      value: `₦${pendingPayments.toLocaleString()}`, 
       icon: DollarSign, 
       color: "text-yellow-400",
       bgColor: "bg-yellow-900/20",
-      change: "12 invoices"
+      change: "Total project value"
     },
     { 
-      title: "Overdue Orders", 
-      value: "5", 
+      title: "Delayed Orders", 
+      value: overdueCount, 
       icon: AlertCircle, 
       color: "text-red-400",
       bgColor: "bg-red-900/20",
-      change: "Need attention"
+      change: "Needs attention"
     },
   ];
 
@@ -63,26 +103,42 @@ const Dashboard = () => {
     { name: "Fatima Bello", orders: 2, lastVisit: "Oct 26, 2025", status: "Active" },
   ];
 
-  const getStatusIcon = (status) => {
+ const getStatusIcon = (status) => {
     switch(status) {
-      case "Completed": return <CheckCircle className="w-4 h-4" />;
-      case "Overdue": return <XCircle className="w-4 h-4" />;
-      case "In Progress": return <Clock className="w-4 h-4" />;
+      case "Delivered": return <CheckCircle className="w-4 h-4" />;
+      case "Delayed": return <XCircle className="w-4 h-4" />;
+      case "Cutting":
+      case "Sewing":
+      case "Fitting": return <Clock className="w-4 h-4" />;
       default: return <Package className="w-4 h-4" />;
     }
   };
 
-  return (
+
+
+const getStatusColor = (status) => {
+    switch (status) {
+      case "Delivered": return "bg-green-900/30 text-green-400 border border-green-700";
+      case "Delayed": return "bg-red-900/30 text-red-400 border border-red-700";
+      case "Pending": return "bg-gray-800 text-gray-400 border border-gray-700";
+      default: return "bg-yellow-900/30 text-yellow-400 border border-yellow-700";
+    }
+  };
+
+  
+ return (
     <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
-          <p className="text-gray-400">Welcome back! Here's what's happening with your tailoring business today.</p>
+          <p className="text-gray-400">Live summary of your Tapsure projects.</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-400">Today</p>
-          <p className="text-lg font-semibold text-white">Wednesday, Oct 29, 2025</p>
+          <p className="text-lg font-semibold text-white">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
         </div>
       </div>
 
@@ -108,49 +164,38 @@ const Dashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
+        {/* Recent Orders Table */}
+        <div className="lg:col-span-3 bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white">Recent Orders</h2>
-            <button className="text-sm text-indigo-400 hover:text-indigo-300">View All →</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">ORDER ID</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">OUTFIT</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">STATUS</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 pb-3">PAYMENT</th>
+                <tr className="border-b border-gray-800 text-left">
+                  <th className="text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
+                  <th className="text-xs font-semibold text-gray-400 pb-3">OUTFIT</th>
+                  <th className="text-xs font-semibold text-gray-400 pb-3">STATUS</th>
+                  <th className="text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
+                  <th className="text-xs font-semibold text-gray-400 pb-3">AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {loading ? (
+                   <tr><td colSpan="5" className="text-center py-10 text-gray-500">Loading...</td></tr>
+                ) : outfits.map((order) => (
                   <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-4 text-sm text-gray-300 font-mono">{order.id}</td>
-                    <td className="py-4 text-sm text-gray-300">{order.client}</td>
-                    <td className="py-4 text-sm text-gray-400">{order.outfit}</td>
+                    <td className="py-4 text-sm text-gray-300">{order.clientName}</td>
+                    <td className="py-4 text-sm text-gray-400">{order.outfitType}</td>
                     <td className="py-4">
-                      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full 
-                        ${order.color === 'green' ? 'bg-green-900/30 text-green-400 border border-green-700' : ''}
-                        ${order.color === 'yellow' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700' : ''}
-                        ${order.color === 'red' ? 'bg-red-900/30 text-red-400 border border-red-700' : ''}
-                        ${order.color === 'gray' ? 'bg-gray-800 text-gray-400 border border-gray-700' : ''}
-                      `}>
+                      <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-1 rounded-full border ${getStatusColor(order.status)}`}>
                         {getStatusIcon(order.status)}
                         {order.status}
                       </span>
                     </td>
                     <td className="py-4 text-sm text-gray-400">{order.dueDate}</td>
-                    <td className="py-4">
-                      <span className={`text-sm font-semibold ${
-                        order.payment === '100%' ? 'text-green-400' : 
-                        order.payment === '0%' ? 'text-red-400' : 'text-yellow-400'
-                      }`}>
-                        {order.payment}
-                      </span>
+                    <td className="py-4 text-sm font-semibold text-indigo-400">
+                      ₦{Number(order.amount || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))}

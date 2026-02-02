@@ -94,6 +94,10 @@ const Outfits = () => {
     switch (status) {
       case "Delivered":
         return "bg-green-900/30 text-green-400 border border-green-700";
+        case "Ready": return "bg-indigo-900/30 text-indigo-400 border border-indigo-700"; // Added Ready color
+    case "Cutting": 
+    case "Sewing":
+    case "Fitting":
       case "In Progress":
         return "bg-yellow-900/30 text-yellow-400 border border-yellow-700";
       case "Delayed":

@@ -124,11 +124,13 @@ const OutfitDetails = () => {
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
                 className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Ready">Ready</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Delayed">Delayed</option>
+               <option value="Pending">Pending</option>
+<option value="Cutting">Cutting</option>
+<option value="Sewing">Sewing</option>
+<option value="Fitting">Fitting</option>
+<option value="Ready">Ready</option>
+<option value="Delivered">Delivered</option>
+<option value="Delayed">Delayed</option>
               </select>
             </div>
 

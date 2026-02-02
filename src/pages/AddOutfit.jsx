@@ -100,10 +100,12 @@ const AddOutfit = () => {
               onChange={(e) => setFormData({...formData, status: e.target.value})}
             >
               <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Ready">Ready</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Delayed">Delayed</option>
+<option value="Cutting">Cutting</option>
+<option value="Sewing">Sewing</option>
+<option value="Fitting">Fitting</option>
+<option value="Ready">Ready</option>
+<option value="Delivered">Delivered</option>
+<option value="Delayed">Delayed</option>
             </select>
           </div>
 
