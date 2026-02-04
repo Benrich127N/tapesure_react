@@ -69,7 +69,7 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
 {/* Mobile sidebar */}
     <div
       className={`
-        fixed sm:static z-[60]
+fixed top-16 h-[calc(100vh-4rem)] sm:top-0 sm:h-screen sm:static z-[60]
       ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
       ${collapsed ? "w-20" : "w-64"}
       ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
@@ -82,7 +82,8 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
   {/* Mobile menu button */}
  <button
   onClick={toggleMobileSidebar}
-  className="sm:hidden text-gray-400 hover:text-white absolute top-6 right-[-3rem]"
+   className="sm:hidden text-gray-400 hover:text-white"
+
 >
 
     <LayoutDashboard className="w-6 h-6" />
