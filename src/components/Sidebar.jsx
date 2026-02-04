@@ -62,14 +62,14 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
     {/* Mobile overlay */}
     <div
       onClick={toggleMobileSidebar}
-      className={`fixed inset-0 bg-black/60 z-40 sm:hidden ${
+      className={`fixed inset-0 bg-black/60 z-50 sm:hidden ${
         mobileOpen ? "block" : "hidden"
       }`}
     />
 {/* Mobile sidebar */}
     <div
       className={`
-        fixed sm:static z-50
+        fixed sm:static z-60
       ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
       ${collapsed ? "w-20" : "w-64"}
       ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
