@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
 import { signOut } from "firebase/auth";
 import {auth} from "../../firebase"
-import { LayoutDashboard, Scissors, Calendar,  } from 'lucide-react';
+import { LayoutDashboard, Calendar,  } from 'lucide-react';
 
 
 
@@ -29,7 +29,8 @@ const navItems = [
 ];
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+const [collapsed, setCollapsed] = useState(false);
+const [mobileOpen, setMobileOpen] = useState(false);
 
 
   const navigate = useNavigate(); // <-- Place it here
@@ -46,8 +47,9 @@ const Sidebar = () => {
     }
   };
 
+const toggleSidebar = () => setCollapsed(!collapsed);
+const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
 
-  const toggleSidebar = () => setCollapsed(!collapsed);
 
   const primaryBg = "bg-black";
   const activeLink =
@@ -55,24 +57,47 @@ const Sidebar = () => {
   const defaultLink =
     "text-gray-400 hover:bg-gray-900 hover:text-white";
 
-  return (
+ return (
+  <>
+    {/* Mobile overlay */}
+    <div
+      onClick={toggleMobileSidebar}
+      className={`fixed inset-0 bg-black/60 z-40 sm:hidden ${
+        mobileOpen ? "block" : "hidden"
+      }`}
+    />
+{/* Mobile sidebar */}
     <div
       className={`
-        ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
-        ${collapsed ? "w-20" : "w-64"}
+        fixed sm:static z-50
+      ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
+      ${collapsed ? "w-20" : "w-64"}
+      ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+      sm:translate-x-0
+
       `}
     >
       {/* Sidebar Header */}
       <div className="flex items-center justify-between h-20 border-b border-gray-900 px-4">
+  {/* Mobile menu button */}
+ <button
+  onClick={toggleMobileSidebar}
+  className="sm:hidden text-gray-400 hover:text-white absolute top-6 right-[-3rem]"
+>
+
+    <LayoutDashboard className="w-6 h-6" />
+  </button>
+
         {!collapsed && (
           <span className="text-xl font-bold text-white tracking-wider">
             Tape<span className="text-indigo-400">Sure</span>
           </span>
         )}
         <button
-          onClick={toggleSidebar}
-          className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors duration-200"
-        >
+  onClick={toggleSidebar}
+  className="hidden sm:block p-2 text-gray-400 hover:text-white rounded-lg transition-colors duration-200"
+>
+
           {collapsed ? (
             <ChevronRight className="w-5 h-5" />
           ) : (
@@ -85,8 +110,10 @@ const Sidebar = () => {
       <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
-            key={item.name}
-            to={item.path}
+  key={item.name}
+  to={item.path}
+  onClick={() => setMobileOpen(false)}
+
             className={({ isActive }) =>
               `
               flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200
@@ -103,8 +130,7 @@ const Sidebar = () => {
 
         {/* Logout Section */}
       <div className="pt-4 mt-4 border-t border-gray-800">
-  <a
-    href="javascript:void(0)" 
+  <button type="button" 
     onClick={handleLogout}
     className={`
       flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200
@@ -114,7 +140,7 @@ const Sidebar = () => {
   >
     <LogOut className="h-5 w-5 text-red-500" />
     {!collapsed && <span className="ml-3">Logout</span>}
-  </a>
+  </button>
 </div>
       </nav>
 
@@ -143,6 +169,8 @@ const Sidebar = () => {
         )}
       </div>
     </div>
+    </>
+
   );
 };
 

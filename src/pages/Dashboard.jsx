@@ -131,10 +131,10 @@ const getStatusColor = (status) => {
       {/* Header */}
 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Dashboard Overview</h1>
           <p className="text-gray-400">Live summary of your Tapsure projects.</p>
         </div>
-        <div className="text-right">
+<div className="sm:text-right">
           <p className="text-sm text-gray-400">Today</p>
           <p className="text-lg font-semibold text-white">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -146,7 +146,7 @@ const getStatusColor = (status) => {
 
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => (
           <div key={index} className="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-800">
             <div className="flex items-center justify-between mb-4">
@@ -156,7 +156,8 @@ const getStatusColor = (status) => {
               <TrendingUp className="w-5 h-5 text-gray-600" />
             </div>
             <h3 className="text-gray-400 text-sm font-medium mb-1">{stat.title}</h3>
-            <p className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</p>
+           <p className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1`}>
+{stat.value}</p>
             <p className="text-xs text-gray-500">{stat.change}</p>
           </div>
         ))}
@@ -169,15 +170,20 @@ const getStatusColor = (status) => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white">Recent Orders</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+<div className="overflow-x-auto -mx-4 sm:mx-0">
+<table className="w-full min-w-[640px] sm:min-w-0">
               <thead>
                 <tr className="border-b border-gray-800 text-left">
-                  <th className="text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
-                  <th className="text-xs font-semibold text-gray-400 pb-3">OUTFIT</th>
-                  <th className="text-xs font-semibold text-gray-400 pb-3">STATUS</th>
-                  <th className="text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
-                  <th className="text-xs font-semibold text-gray-400 pb-3">AMOUNT</th>
+                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
+CLIENT</th>
+                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
+OUTFIT</th>
+                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
+STATUS</th>
+                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
+DUE DATE</th>
+                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
+AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,8 +191,11 @@ const getStatusColor = (status) => {
                    <tr><td colSpan="5" className="text-center py-10 text-gray-500">Loading...</td></tr>
                 ) : outfits.map((order) => (
                   <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-4 text-sm text-gray-300">{order.clientName}</td>
-                    <td className="py-4 text-sm text-gray-400">{order.outfitType}</td>
+                    <td className="py-3 sm:py-4 text-xs sm:text-sm text-gray-300">{order.clientName}</td>
+                    <td className="py-3 sm:py-4 text-xs sm:text-sm text-gray-400">
+  {order.outfitType}
+</td>
+
                     <td className="py-4">
                       <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-1 rounded-full border ${getStatusColor(order.status)}`}>
                         {getStatusIcon(order.status)}
@@ -210,11 +219,12 @@ const getStatusColor = (status) => {
             <h2 className="text-xl font-bold text-white">Reminders</h2>
             <Calendar className="w-5 h-5 text-indigo-400" />
           </div>
-          <div className="space-y-4">
+         <div className="space-y-3 sm:space-y-4">
+
             {reminders.map((reminder) => (
               <div 
                 key={reminder.id} 
-                className={`p-4 rounded-lg border ${
+                className={`p-3 rounded-lg border ${
                   reminder.priority === 'high' 
                     ? 'bg-red-900/10 border-red-800' 
                     : 'bg-gray-800 border-gray-700'
@@ -243,11 +253,12 @@ const getStatusColor = (status) => {
       </div>
 
       {/* Bottom Row - Recent Clients & Quick Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Clients */}
         <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
           <h2 className="text-xl font-bold text-white mb-6">Recent Clients</h2>
-          <div className="space-y-4">
+         <div className="space-y-3 sm:space-y-4">
+
             {recentClients.map((client, index) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-800/70 transition">
                 <div className="flex items-center gap-3">
@@ -271,7 +282,8 @@ const getStatusColor = (status) => {
         {/* Payment Summary */}
         <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
           <h2 className="text-xl font-bold text-white mb-6">Payment Summary</h2>
-          <div className="space-y-4">
+         <div className="space-y-3 sm:space-y-4">
+
             <div className="p-4 bg-green-900/10 rounded-lg border border-green-800">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">Total Received</span>
