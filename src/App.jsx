@@ -21,10 +21,10 @@ import OutfitDetails from "./pages/OutfitDetails";
 import CalendarPage from "./pages/CalendarPage.jsx";
 
 
-
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Add this
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -49,9 +49,12 @@ function App() {
         <Login />
       ) : (
         <div className="flex h-screen bg-black text-gray-900">
-          <Sidebar />
+          <Sidebar 
+            mobileOpen={mobileMenuOpen} 
+            setMobileOpen={setMobileMenuOpen} 
+          />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <Topbar />
+            <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
             <main className="flex-1 p-6 overflow-auto bg-black">
               <Routes>
                 <Route path="/" element={<Dashboard />} />

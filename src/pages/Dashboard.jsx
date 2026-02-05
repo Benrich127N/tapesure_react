@@ -3,14 +3,11 @@ import { db, auth } from "../../firebase";
 import { Calendar, AlertCircle, DollarSign, Package, Users, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 
-
-
 const Dashboard = () => {
-
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  useEffect(() => {
     if (!auth.currentUser) return;
 
     // Fetch latest 10 outfits
@@ -33,17 +30,14 @@ useEffect(() => {
     return () => unsubscribe();
   }, []);
 
-
-
   // --- Real-time Calculations ---
   const totalOrders = outfits.length;
   const pendingPayments = outfits.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   const overdueCount = outfits.filter(o => o.status === "Delayed").length;
-  // Unique client names count
   const uniqueClients = [...new Set(outfits.map(o => o.clientName))].length;
 
   // Stats Data
-const stats = [
+  const stats = [
     { 
       title: "Total Orders", 
       value: totalOrders, 
@@ -78,15 +72,6 @@ const stats = [
     },
   ];
 
-  // Recent Orders
-  const orders = [
-    { id: "ORD-001", client: "Adebayo James", outfit: "3-Piece Suit", status: "In Progress", dueDate: "Nov 5", payment: "50%", color: "yellow" },
-    { id: "ORD-002", client: "Chioma Okafor", outfit: "Wedding Gown", status: "Completed", dueDate: "Oct 28", payment: "100%", color: "green" },
-    { id: "ORD-003", client: "Emeka Nwankwo", outfit: "Agbada Set", status: "Overdue", dueDate: "Oct 25", payment: "20%", color: "red" },
-    { id: "ORD-004", client: "Fatima Bello", outfit: "Ankara Dress", status: "In Progress", dueDate: "Nov 8", payment: "30%", color: "yellow" },
-    { id: "ORD-005", client: "Tunde Bakare", outfit: "Senator Wear", status: "Uncompleted", dueDate: "Nov 12", payment: "0%", color: "gray" },
-  ];
-
   // Upcoming Reminders
   const reminders = [
     { id: 1, client: "Adebayo James", task: "Final fitting scheduled", time: "Today, 2:00 PM", priority: "high" },
@@ -103,20 +88,18 @@ const stats = [
     { name: "Fatima Bello", orders: 2, lastVisit: "Oct 26, 2025", status: "Active" },
   ];
 
- const getStatusIcon = (status) => {
+  const getStatusIcon = (status) => {
     switch(status) {
-      case "Delivered": return <CheckCircle className="w-4 h-4" />;
-      case "Delayed": return <XCircle className="w-4 h-4" />;
+      case "Delivered": return <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />;
+      case "Delayed": return <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />;
       case "Cutting":
       case "Sewing":
-      case "Fitting": return <Clock className="w-4 h-4" />;
-      default: return <Package className="w-4 h-4" />;
+      case "Fitting": return <Clock className="w-3 h-3 sm:w-4 sm:h-4" />;
+      default: return <Package className="w-3 h-3 sm:w-4 sm:h-4" />;
     }
   };
 
-
-
-const getStatusColor = (status) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case "Delivered": return "bg-green-900/30 text-green-400 border border-green-700";
       case "Delayed": return "bg-red-900/30 text-red-400 border border-red-700";
@@ -125,77 +108,115 @@ const getStatusColor = (status) => {
     }
   };
 
-  
- return (
-    <div className="w-full space-y-6">
+  return (
+    <div className="w-full space-y-4 sm:space-y-6">
       {/* Header */}
-<div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Dashboard Overview</h1>
-          <p className="text-gray-400">Live summary of your Tapsure projects.</p>
+          <p className="text-sm sm:text-base text-gray-400">Live summary of your Tapsure projects.</p>
         </div>
-<div className="sm:text-right">
-          <p className="text-sm text-gray-400">Today</p>
-          <p className="text-lg font-semibold text-white">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+        <div className="sm:text-right">
+          <p className="text-xs sm:text-sm text-gray-400">Today</p>
+          <p className="text-base sm:text-lg font-semibold text-white">
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: window.innerWidth < 640 ? 'short' : 'long', 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric' 
+            })}
           </p>
         </div>
       </div>
 
-
-
-
       {/* Stats Cards */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+          <div key={index} className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 border border-gray-800">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className={`p-2 sm:p-3 rounded-lg ${stat.bgColor}`}>
+                <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color}`} />
               </div>
-              <TrendingUp className="w-5 h-5 text-gray-600" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
             </div>
-            <h3 className="text-gray-400 text-sm font-medium mb-1">{stat.title}</h3>
-           <p className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1`}>
-{stat.value}</p>
-            <p className="text-xs text-gray-500">{stat.change}</p>
+            <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium mb-1">{stat.title}</h3>
+            <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${stat.color} mb-1`}>
+              {stat.value}
+            </p>
+            <p className="text-[10px] sm:text-xs text-gray-500">{stat.change}</p>
           </div>
         ))}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders Table */}
-        <div className="lg:col-span-3 bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white">Recent Orders</h2>
-          </div>
-<div className="overflow-x-auto -mx-4 sm:mx-0">
-<table className="w-full min-w-[640px] sm:min-w-0">
-              <thead>
-                <tr className="border-b border-gray-800 text-left">
-                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
-CLIENT</th>
-                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
-OUTFIT</th>
-                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
-STATUS</th>
-                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
-DUE DATE</th>
-                  <th className="text-[10px] sm:text-xs font-semibold text-gray-400 pb-3">
-AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                   <tr><td colSpan="5" className="text-center py-10 text-gray-500">Loading...</td></tr>
-                ) : outfits.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-3 sm:py-4 text-xs sm:text-sm text-gray-300">{order.clientName}</td>
-                    <td className="py-3 sm:py-4 text-xs sm:text-sm text-gray-400">
-  {order.outfitType}
-</td>
+      {/* Recent Orders - Mobile Cards & Desktop Table */}
+      <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Recent Orders</h2>
+        </div>
 
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-3">
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">Loading...</div>
+          ) : outfits.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">No orders yet</div>
+          ) : (
+            outfits.map((order) => (
+              <div key={order.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-2">
+                {/* Header: Client & Status */}
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-200 truncate">
+                      {order.clientName}
+                    </h3>
+                    <p className="text-xs text-gray-400 truncate">{order.outfitType}</p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 text-[9px] uppercase font-bold px-2 py-1 rounded-full border ml-2 flex-shrink-0 ${getStatusColor(order.status)}`}>
+                    {getStatusIcon(order.status)}
+                    <span className="hidden sm:inline">{order.status}</span>
+                  </span>
+                </div>
+
+                {/* Footer: Amount & Due Date */}
+                <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+                  <div>
+                    <p className="text-[10px] text-gray-500">Amount</p>
+                    <p className="text-sm font-semibold text-indigo-400">
+                      ₦{Number(order.amount || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500">Due Date</p>
+                    <p className="text-xs text-gray-300">{order.dueDate}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-800 text-left">
+                <th className="text-xs font-semibold text-gray-400 pb-3">CLIENT</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">OUTFIT</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">STATUS</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">DUE DATE</th>
+                <th className="text-xs font-semibold text-gray-400 pb-3">AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="5" className="text-center py-10 text-gray-500">Loading...</td></tr>
+              ) : outfits.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-10 text-gray-500">No orders yet</td></tr>
+              ) : (
+                outfits.map((order) => (
+                  <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                    <td className="py-4 text-sm text-gray-300">{order.clientName}</td>
+                    <td className="py-4 text-sm text-gray-400">{order.outfitType}</td>
                     <td className="py-4">
                       <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-1 rounded-full border ${getStatusColor(order.status)}`}>
                         {getStatusIcon(order.status)}
@@ -207,20 +228,22 @@ AMOUNT</th>
                       ₦{Number(order.amount || 0).toLocaleString()}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        {/* Reminders - Takes 1 column */}
-        <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">Reminders</h2>
-            <Calendar className="w-5 h-5 text-indigo-400" />
+      {/* Main Content Grid - Reminders */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Reminders */}
+        <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6 lg:col-span-1">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-white">Reminders</h2>
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
           </div>
-         <div className="space-y-3 sm:space-y-4">
-
+          <div className="space-y-3">
             {reminders.map((reminder) => (
               <div 
                 key={reminder.id} 
@@ -231,48 +254,47 @@ AMOUNT</th>
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-200">{reminder.client}</h3>
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-200">{reminder.client}</h3>
                   {reminder.priority === 'high' && (
-                    <span className="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded-full border border-red-700">
+                    <span className="text-[10px] sm:text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded-full border border-red-700 flex-shrink-0 ml-2">
                       Urgent
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-400 mb-2">{reminder.task}</p>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-400 mb-2">{reminder.task}</p>
+                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-500">
                   <Clock className="w-3 h-3" />
                   {reminder.time}
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full mt-4 text-sm text-indigo-400 hover:text-indigo-300 py-2 border border-gray-800 rounded-lg hover:bg-gray-800/50 transition">
+          <button className="w-full mt-4 text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 py-2 border border-gray-800 rounded-lg hover:bg-gray-800/50 transition">
             View All Reminders
           </button>
         </div>
       </div>
 
-      {/* Bottom Row - Recent Clients & Quick Stats */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* Bottom Row - Recent Clients & Payment Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Clients */}
-        <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-6">Recent Clients</h2>
-         <div className="space-y-3 sm:space-y-4">
-
+        <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Recent Clients</h2>
+          <div className="space-y-3">
             {recentClients.map((client, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-800/70 transition">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-900/30 border border-indigo-700 flex items-center justify-center text-indigo-400 font-semibold">
+              <div key={index} className="flex items-center justify-between p-3 sm:p-4 bg-gray-800 rounded-lg hover:bg-gray-800/70 transition">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-900/30 border border-indigo-700 flex items-center justify-center text-indigo-400 font-semibold text-xs sm:text-sm flex-shrink-0">
                     {client.name.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-200">{client.name}</h3>
-                    <p className="text-xs text-gray-500">Last visit: {client.lastVisit}</p>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-200 truncate">{client.name}</h3>
+                    <p className="text-[10px] sm:text-xs text-gray-500 truncate">Last: {client.lastVisit}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-indigo-400">{client.orders} orders</p>
-                  <span className="text-xs text-green-400">{client.status}</span>
+                <div className="text-right flex-shrink-0 ml-2">
+                  <p className="text-xs sm:text-sm font-semibold text-indigo-400">{client.orders}</p>
+                  <span className="text-[10px] sm:text-xs text-green-400">{client.status}</span>
                 </div>
               </div>
             ))}
@@ -280,35 +302,34 @@ AMOUNT</th>
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-white mb-6">Payment Summary</h2>
-         <div className="space-y-3 sm:space-y-4">
-
-            <div className="p-4 bg-green-900/10 rounded-lg border border-green-800">
+        <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Payment Summary</h2>
+          <div className="space-y-3">
+            <div className="p-3 sm:p-4 bg-green-900/10 rounded-lg border border-green-800">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-400">Total Received</span>
-                <DollarSign className="w-5 h-5 text-green-400" />
+                <span className="text-xs sm:text-sm text-gray-400">Total Received</span>
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
               </div>
-              <p className="text-2xl font-bold text-green-400">₦850,000</p>
-              <p className="text-xs text-gray-500 mt-1">This month</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-400">₦850,000</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-1">This month</p>
             </div>
             
-            <div className="p-4 bg-yellow-900/10 rounded-lg border border-yellow-800">
+            <div className="p-3 sm:p-4 bg-yellow-900/10 rounded-lg border border-yellow-800">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-400">Pending Payments</span>
-                <AlertCircle className="w-5 h-5 text-yellow-400" />
+                <span className="text-xs sm:text-sm text-gray-400">Pending Payments</span>
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
               </div>
-              <p className="text-2xl font-bold text-yellow-400">₦450,000</p>
-              <p className="text-xs text-gray-500 mt-1">12 outstanding invoices</p>
+              <p className="text-xl sm:text-2xl font-bold text-yellow-400">₦450,000</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-1">12 outstanding invoices</p>
             </div>
             
-            <div className="p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
+            <div className="p-3 sm:p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-400">Expected This Week</span>
-                <TrendingUp className="w-5 h-5 text-indigo-400" />
+                <span className="text-xs sm:text-sm text-gray-400">Expected This Week</span>
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
               </div>
-              <p className="text-2xl font-bold text-indigo-400">₦180,000</p>
-              <p className="text-xs text-gray-500 mt-1">5 deliveries due</p>
+              <p className="text-xl sm:text-2xl font-bold text-indigo-400">₦180,000</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 mt-1">5 deliveries due</p>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-black shadow-inner py-4 text-center text-gray-500 text-sm border-t border-gray-900">
+    <footer className="bg-black shadow-inner py-4 px-4 sm:px-6 text-center text-gray-500 text-sm sm:text-base border-t border-gray-900">
       © {currentYear} Tapsure. All rights reserved.
     </footer>
   );

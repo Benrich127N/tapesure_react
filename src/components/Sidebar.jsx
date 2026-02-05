@@ -28,12 +28,13 @@ const navItems = [
   { name: "Settings", path: "/settings", icon: Settings },
 ];
 
-const Sidebar = () => {
-const [collapsed, setCollapsed] = useState(false);
-const [mobileOpen, setMobileOpen] = useState(false);
+const Sidebar = ({ mobileOpen, setMobileOpen }) => { // Change this line
+  const [collapsed, setCollapsed] = useState(false);
+  // Remove the local mobileOpen state since it's now passed as props
+  
+  const navigate = useNavigate();
 
-
-  const navigate = useNavigate(); // <-- Place it here
+  // ... rest of your code stays the same
 
   // --- LOGOUT LOGIC START ---
   const handleLogout = async (e) => {
@@ -69,7 +70,7 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
 {/* Mobile sidebar */}
     <div
       className={`
-fixed top-16 h-[calc(100vh-4rem)] sm:top-0 sm:h-screen sm:static z-[60]
+        fixed sm:static z-[60]
       ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
       ${collapsed ? "w-20" : "w-64"}
       ${mobileOpen ? "translate-x-0" : "-translate-x-full"}

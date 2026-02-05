@@ -2,12 +2,39 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+// 1. Added getDocs, query, where to imports
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { ArrowLeft, Save, Scissors, Calendar, User, DollarSign, FileText, Tag } from "lucide-react";
 
+// --- 2. Helper function placed outside the component ---
+const ensureClientExists = async (clientName) => {
+  if (!clientName.trim() || !auth.currentUser) return;
 
+  const clientsRef = collection(db, "clients");
+  const q = query(
+    clientsRef,
+    where("userId", "==", auth.currentUser.uid),
+    where("name", "==", clientName.trim())
+  );
 
-
+  const snapshot = await getDocs(q);
+  
+  // If client doesn't exist, create them
+  if (snapshot.empty) {
+    await addDoc(clientsRef, {
+      userId: auth.currentUser.uid,
+      name: clientName.trim(),
+      phone: "", 
+      email: "",
+      measurements: {
+        chest: 0,
+        waist: 0,
+        hip: 0
+      },
+      createdAt: serverTimestamp()
+    });
+  }
+};
 
 const AddOutfit = () => {
   const navigate = useNavigate();
@@ -18,7 +45,7 @@ const AddOutfit = () => {
     outfitType: "",
     dueDate: "",
     amount: "",
-    status: "Pending", // Default status
+    status: "Pending",
     notes: ""
   });
 
@@ -27,6 +54,9 @@ const AddOutfit = () => {
     setLoading(true);
 
     try {
+      // --- 3. Run the check BEFORE saving the outfit ---
+      await ensureClientExists(formData.clientName);
+
       await addDoc(collection(db, "outfits"), {
         userId: auth.currentUser.uid,
         clientName: formData.clientName,
@@ -71,6 +101,7 @@ const AddOutfit = () => {
             <input
               required
               type="text"
+              placeholder="e.g. Adebayo James"
               className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               onChange={(e) => setFormData({...formData, clientName: e.target.value})}
             />
@@ -84,12 +115,13 @@ const AddOutfit = () => {
             <input
               required
               type="text"
+              placeholder="e.g. Agbada"
               className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               onChange={(e) => setFormData({...formData, outfitType: e.target.value})}
             />
           </div>
 
-          {/* Status Picker - NEW */}
+          {/* Status Picker */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
               <Tag size={16} /> Order Status
@@ -100,12 +132,12 @@ const AddOutfit = () => {
               onChange={(e) => setFormData({...formData, status: e.target.value})}
             >
               <option value="Pending">Pending</option>
-<option value="Cutting">Cutting</option>
-<option value="Sewing">Sewing</option>
-<option value="Fitting">Fitting</option>
-<option value="Ready">Ready</option>
-<option value="Delivered">Delivered</option>
-<option value="Delayed">Delayed</option>
+              <option value="Cutting">Cutting</option>
+              <option value="Sewing">Sewing</option>
+              <option value="Fitting">Fitting</option>
+              <option value="Ready">Ready</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Delayed">Delayed</option>
             </select>
           </div>
 
@@ -143,6 +175,7 @@ const AddOutfit = () => {
           </label>
           <textarea
             rows="3"
+            placeholder="Fabric details, style variations..."
             className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
             onChange={(e) => setFormData({...formData, notes: e.target.value})}
           ></textarea>
@@ -159,7 +192,6 @@ const AddOutfit = () => {
       </form>
     </div>
   );
-
-  };
+};
 
 export default AddOutfit;
