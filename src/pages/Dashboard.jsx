@@ -166,8 +166,11 @@ const Dashboard = () => {
         priority: priority,
       };
     })
-    .sort((a, b) => (a.priority === "high" ? -1 : 1)) // Put high priority first
-    .slice(0, 4); // Only show top 4 on dashboard
+.sort((a, b) => {
+  if (a.priority === "high" && b.priority !== "high") return -1;
+  if (a.priority !== "high" && b.priority === "high") return 1;
+  return 0;
+})    .slice(0, 4); // Only show top 4 on dashboard
 
   const getStatusIcon = (status) => {
     switch (status) {
