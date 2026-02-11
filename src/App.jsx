@@ -19,6 +19,11 @@ import Login from "./pages/Login";
 import AddOutfit from "./pages/AddOutfit";
 import OutfitDetails from "./pages/OutfitDetails";
 import CalendarPage from "./pages/CalendarPage.jsx";
+import ClientDetails from "./pages/ClientDetails";
+import CreateInvoice from "./pages/CreateInvoice";
+import InvoiceDetails from "./pages/InvoiceDetails";
+
+
 
 
 function App() {
@@ -66,6 +71,7 @@ function App() {
                 <Route path="/outfits/new" element={<AddOutfit />} />
                 <Route path="/outfits/:id" element={<OutfitDetails />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/clients/:id" element={<ClientDetails />} />
               </Routes>
             </main>
             <Footer />

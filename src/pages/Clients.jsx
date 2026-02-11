@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../firebase";
+import { useNavigate } from 'react-router-dom'; // Add this line at the top
 import { 
   collection, 
   query, 
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 
 const Clients = () => {
+  const navigate = useNavigate(); // <--- ADD THIS LINE HERE
   const [clients, setClients] = useState([]);
   const [outfits, setOutfits] = useState([]); // Add this
   const [loading, setLoading] = useState(true);
@@ -283,6 +285,8 @@ const Clients = () => {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button 
+                      onClick={() => navigate(`/clients/${client.id}`)}
+
                     className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95"
                   >
                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -290,6 +294,8 @@ const Clients = () => {
                     <span className="sm:hidden">View</span>
                   </button>
                   <button 
+                      onClick={() => navigate(`/clients/${client.id}`)}
+
                     className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95"
                   >
                     <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
