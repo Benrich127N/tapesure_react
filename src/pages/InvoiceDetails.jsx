@@ -3,18 +3,18 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db, auth } from "../../firebase";
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { 
-  ArrowLeft, 
-  Download, 
-  Printer, 
-  Send, 
-  Edit, 
-  Trash2, 
-  CheckCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  Download,
+  Printer,
+  Send,
+  Edit,
+  Trash2,
+  CheckCircle,
+  Clock,
   AlertCircle,
   Share2,
-  DollarSign
+  DollarSign,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 
@@ -54,21 +54,30 @@ const InvoiceDetails = () => {
   }, [id, navigate]);
 
   const getStatusColor = (status) => {
-    switch(status) {
-      case "Paid": return "bg-green-900/30 text-green-400 border-green-700";
-      case "Partial": return "bg-blue-900/30 text-blue-400 border-blue-700";
-      case "Pending": return "bg-yellow-900/30 text-yellow-400 border-yellow-700";
-      case "Unpaid": return "bg-gray-800 text-gray-400 border-gray-700";
-      case "Overdue": return "bg-red-900/30 text-red-400 border-red-700";
-      default: return "bg-gray-800 text-gray-400 border-gray-700";
+    switch (status) {
+      case "Paid":
+        return "bg-green-900/30 text-green-400 border-green-700";
+      case "Partial":
+        return "bg-blue-900/30 text-blue-400 border-blue-700";
+      case "Pending":
+        return "bg-yellow-900/30 text-yellow-400 border-yellow-700";
+      case "Unpaid":
+        return "bg-gray-800 text-gray-400 border-gray-700";
+      case "Overdue":
+        return "bg-red-900/30 text-red-400 border-red-700";
+      default:
+        return "bg-gray-800 text-gray-400 border-gray-700";
     }
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
-      case "Paid": return <CheckCircle className="w-5 h-5" />;
-      case "Overdue": return <AlertCircle className="w-5 h-5" />;
-      default: return <Clock className="w-5 h-5" />;
+    switch (status) {
+      case "Paid":
+        return <CheckCircle className="w-5 h-5" />;
+      case "Overdue":
+        return <AlertCircle className="w-5 h-5" />;
+      default:
+        return <Clock className="w-5 h-5" />;
     }
   };
 
@@ -128,12 +137,12 @@ const InvoiceDetails = () => {
     pdf.setFont("helvetica", "normal");
     pdf.text(invoice.clientName, margin, yPos);
     yPos += 6;
-    
+
     if (invoice.clientPhone) {
       pdf.text(`Phone: ${invoice.clientPhone}`, margin, yPos);
       yPos += 6;
     }
-    
+
     if (invoice.clientEmail) {
       pdf.text(`Email: ${invoice.clientEmail}`, margin, yPos);
       yPos += 6;
@@ -148,7 +157,7 @@ const InvoiceDetails = () => {
 
     // Table header
     pdf.setFillColor(240, 240, 240);
-    pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 8, 'F');
+    pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 8, "F");
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "bold");
     pdf.text("Description", margin + 2, yPos);
@@ -157,20 +166,27 @@ const InvoiceDetails = () => {
 
     // Table content
     pdf.setFont("helvetica", "normal");
-    
+
     if (invoice.outfitType) {
       pdf.text(invoice.outfitType, margin + 2, yPos);
       yPos += 6;
     }
-    
+
     if (invoice.description) {
-      const descLines = pdf.splitTextToSize(invoice.description, pageWidth - 2 * margin - 40);
+      const descLines = pdf.splitTextToSize(
+        invoice.description,
+        pageWidth - 2 * margin - 40,
+      );
       pdf.text(descLines, margin + 2, yPos);
       yPos += descLines.length * 6;
     }
 
     // Amount on the right
-    pdf.text(`₦${Number(invoice.totalAmount || 0).toLocaleString()}`, pageWidth - margin - 30, yPos - 6);
+    pdf.text(
+      `₦${Number(invoice.totalAmount || 0).toLocaleString()}`,
+      pageWidth - margin - 30,
+      yPos - 6,
+    );
     yPos += 15;
 
     // Horizontal line
@@ -181,22 +197,34 @@ const InvoiceDetails = () => {
     // Payment Summary
     pdf.setFontSize(11);
     pdf.setFont("helvetica", "bold");
-    
+
     // Total Amount
     pdf.text("Total Amount:", pageWidth - margin - 80, yPos);
-    pdf.text(`₦${Number(invoice.totalAmount || 0).toLocaleString()}`, pageWidth - margin - 30, yPos);
+    pdf.text(
+      `₦${Number(invoice.totalAmount || 0).toLocaleString()}`,
+      pageWidth - margin - 30,
+      yPos,
+    );
     yPos += 8;
 
     // Amount Paid
     pdf.setTextColor(0, 150, 0);
     pdf.text("Amount Paid:", pageWidth - margin - 80, yPos);
-    pdf.text(`₦${Number(invoice.amountPaid || 0).toLocaleString()}`, pageWidth - margin - 30, yPos);
+    pdf.text(
+      `₦${Number(invoice.amountPaid || 0).toLocaleString()}`,
+      pageWidth - margin - 30,
+      yPos,
+    );
     yPos += 8;
 
     // Balance Due
     pdf.setTextColor(200, 100, 0);
     pdf.text("Balance Due:", pageWidth - margin - 80, yPos);
-    pdf.text(`₦${Number(invoice.balance || 0).toLocaleString()}`, pageWidth - margin - 30, yPos);
+    pdf.text(
+      `₦${Number(invoice.balance || 0).toLocaleString()}`,
+      pageWidth - margin - 30,
+      yPos,
+    );
     pdf.setTextColor(0, 0, 0);
     yPos += 15;
 
@@ -216,7 +244,10 @@ const InvoiceDetails = () => {
       pdf.text("Notes:", margin, yPos);
       yPos += 6;
       pdf.setFont("helvetica", "normal");
-      const notesLines = pdf.splitTextToSize(invoice.notes, pageWidth - 2 * margin);
+      const notesLines = pdf.splitTextToSize(
+        invoice.notes,
+        pageWidth - 2 * margin,
+      );
       pdf.text(notesLines, margin, yPos);
       yPos += notesLines.length * 6 + 10;
     }
@@ -226,9 +257,16 @@ const InvoiceDetails = () => {
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "italic");
     pdf.setTextColor(128, 128, 128);
-    pdf.text("Thank you for your business!", pageWidth / 2, yPos, { align: "center" });
+    pdf.text("Thank you for your business!", pageWidth / 2, yPos, {
+      align: "center",
+    });
     yPos += 6;
-    pdf.text("Generated with TapeSure - www.tapesure.com", pageWidth / 2, yPos, { align: "center" });
+    pdf.text(
+      "Generated with TapeSure - www.tapesure.com",
+      pageWidth / 2,
+      yPos,
+      { align: "center" },
+    );
 
     // Save the PDF
     pdf.save(`Invoice-${invoice.invoiceNumber}.pdf`);
@@ -244,21 +282,25 @@ const InvoiceDetails = () => {
     const shareData = {
       title: `Invoice ${invoice.invoiceNumber}`,
       text: `Invoice from ${invoice.shopName}\nClient: ${invoice.clientName}\nTotal: ₦${Number(invoice.totalAmount || 0).toLocaleString()}\nBalance: ₦${Number(invoice.balance || 0).toLocaleString()}`,
-      url: window.location.href
+      url: window.location.href,
     };
 
     try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare(shareData)
+      ) {
         await navigator.share(shareData);
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(
           `Invoice ${invoice.invoiceNumber}\n` +
-          `From: ${invoice.shopName}\n` +
-          `Client: ${invoice.clientName}\n` +
-          `Total: ₦${Number(invoice.totalAmount || 0).toLocaleString()}\n` +
-          `Balance: ₦${Number(invoice.balance || 0).toLocaleString()}\n\n` +
-          `View invoice: ${window.location.href}`
+            `From: ${invoice.shopName}\n` +
+            `Client: ${invoice.clientName}\n` +
+            `Total: ₦${Number(invoice.totalAmount || 0).toLocaleString()}\n` +
+            `Balance: ₦${Number(invoice.balance || 0).toLocaleString()}\n\n` +
+            `View invoice: ${window.location.href}`,
         );
         alert("Invoice details copied to clipboard!");
       }
@@ -281,9 +323,10 @@ const InvoiceDetails = () => {
     setUpdating(true);
 
     try {
-      const newAmountPaid = Number(invoice.amountPaid || 0) + Number(paymentAmount);
+      const newAmountPaid =
+        Number(invoice.amountPaid || 0) + Number(paymentAmount);
       const newBalance = Number(invoice.totalAmount) - newAmountPaid;
-      
+
       let newStatus = invoice.status;
       if (newBalance === 0) {
         newStatus = "Paid";
@@ -296,7 +339,7 @@ const InvoiceDetails = () => {
         balance: newBalance,
         status: newStatus,
         paymentMethod: paymentMethod,
-        lastPaymentDate: new Date().toISOString().split('T')[0]
+        lastPaymentDate: new Date().toISOString().split("T")[0],
       });
 
       // Update local state
@@ -305,7 +348,7 @@ const InvoiceDetails = () => {
         amountPaid: newAmountPaid,
         balance: newBalance,
         status: newStatus,
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
       });
 
       setShowPaymentModal(false);
@@ -320,7 +363,11 @@ const InvoiceDetails = () => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this invoice? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -364,7 +411,9 @@ const InvoiceDetails = () => {
             <ArrowLeft className="w-5 h-5 text-gray-400" />
           </button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">Invoice Details</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">
+              Invoice Details
+            </h1>
             <p className="text-sm text-gray-400">{invoice.invoiceNumber}</p>
           </div>
         </div>
@@ -379,13 +428,13 @@ const InvoiceDetails = () => {
             Download PDF
           </button>
 
-<button
-    onClick={handlePrint}
-    className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
-  >
-    <Printer className="w-4 h-4" />
-    Print
-  </button>
+          <button
+            onClick={handlePrint}
+            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
 
           <button
             onClick={handleShare}
@@ -405,15 +454,22 @@ const InvoiceDetails = () => {
       </div>
 
       {/* Invoice Content */}
-      <div className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6 sm:p-8" id="invoice-content">
+      <div
+        className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6 sm:p-8"
+        id="invoice-content"
+      >
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 pb-6 border-b border-gray-800">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">{invoice.shopName}</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              {invoice.shopName}
+            </h2>
             <p className="text-sm text-indigo-400">Powered by TapeSure</p>
           </div>
           <div className="mt-4 sm:mt-0">
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold ${getStatusColor(invoice.status)}`}>
+            <span
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold ${getStatusColor(invoice.status)}`}
+            >
               {getStatusIcon(invoice.status)}
               {invoice.status}
             </span>
@@ -423,16 +479,24 @@ const InvoiceDetails = () => {
         {/* Invoice Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <div>
-            <h3 className="text-sm font-semibold text-gray-400 mb-2">Invoice Number</h3>
-            <p className="text-lg font-mono text-white">{invoice.invoiceNumber}</p>
+            <h3 className="text-sm font-semibold text-gray-400 mb-2">
+              Invoice Number
+            </h3>
+            <p className="text-lg font-mono text-white">
+              {invoice.invoiceNumber}
+            </p>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-400 mb-2">Issue Date</h3>
+            <h3 className="text-sm font-semibold text-gray-400 mb-2">
+              Issue Date
+            </h3>
             <p className="text-lg text-white">{invoice.issueDate}</p>
           </div>
           {invoice.dueDate && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-400 mb-2">Due Date</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-2">
+                Due Date
+              </h3>
               <p className="text-lg text-white">{invoice.dueDate}</p>
             </div>
           )}
@@ -442,35 +506,51 @@ const InvoiceDetails = () => {
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-white mb-4">Bill To</h3>
           <div className="bg-gray-800/50 rounded-lg p-4">
-            <p className="text-white font-semibold mb-2">{invoice.clientName}</p>
+            <p className="text-white font-semibold mb-2">
+              {invoice.clientName}
+            </p>
             {invoice.clientPhone && (
-              <p className="text-gray-400 text-sm mb-1">Phone: {invoice.clientPhone}</p>
+              <p className="text-gray-400 text-sm mb-1">
+                Phone: {invoice.clientPhone}
+              </p>
             )}
             {invoice.clientEmail && (
-              <p className="text-gray-400 text-sm">Email: {invoice.clientEmail}</p>
+              <p className="text-gray-400 text-sm">
+                Email: {invoice.clientEmail}
+              </p>
             )}
           </div>
         </div>
 
         {/* Service Details */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-white mb-4">Service Details</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            Service Details
+          </h3>
           <div className="bg-gray-800/50 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-700">
-                  <th className="text-left text-sm font-semibold text-gray-400 p-4">Description</th>
-                  <th className="text-right text-sm font-semibold text-gray-400 p-4">Amount</th>
+                  <th className="text-left text-sm font-semibold text-gray-400 p-4">
+                    Description
+                  </th>
+                  <th className="text-right text-sm font-semibold text-gray-400 p-4">
+                    Amount
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="p-4">
                     {invoice.outfitType && (
-                      <p className="text-white font-medium mb-1">{invoice.outfitType}</p>
+                      <p className="text-white font-medium mb-1">
+                        {invoice.outfitType}
+                      </p>
                     )}
                     {invoice.description && (
-                      <p className="text-gray-400 text-sm">{invoice.description}</p>
+                      <p className="text-gray-400 text-sm">
+                        {invoice.description}
+                      </p>
                     )}
                   </td>
                   <td className="p-4 text-right text-white font-semibold">
@@ -499,7 +579,9 @@ const InvoiceDetails = () => {
             </div>
             <div className="border-t border-gray-700 pt-4">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-gray-300">Balance Due</span>
+                <span className="text-lg font-semibold text-gray-300">
+                  Balance Due
+                </span>
                 <span className="text-2xl font-bold text-yellow-400">
                   ₦{Number(invoice.balance || 0).toLocaleString()}
                 </span>
@@ -511,7 +593,8 @@ const InvoiceDetails = () => {
           {invoice.paymentMethod && (
             <div className="mt-4 pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-400">
-                Payment Method: <span className="text-white">{invoice.paymentMethod}</span>
+                Payment Method:{" "}
+                <span className="text-white">{invoice.paymentMethod}</span>
               </p>
             </div>
           )}
@@ -521,7 +604,9 @@ const InvoiceDetails = () => {
         {invoice.notes && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold text-white mb-2">Notes</h3>
-            <p className="text-gray-400 bg-gray-800/50 rounded-lg p-4">{invoice.notes}</p>
+            <p className="text-gray-400 bg-gray-800/50 rounded-lg p-4">
+              {invoice.notes}
+            </p>
           </div>
         )}
 
@@ -543,7 +628,9 @@ const InvoiceDetails = () => {
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-white mb-4">Record Payment</h3>
+            <h3 className="text-xl font-bold text-white mb-4">
+              Record Payment
+            </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
@@ -601,8 +688,65 @@ const InvoiceDetails = () => {
           </div>
         </div>
       )}
+
+
+{/* --- PASTE THE STYLE BLOCK BELOW THIS LINE --- */}
+      <style>{`
+        @media print {
+          /* Hide everything except invoice content */
+          body * {
+            visibility: hidden;
+          }
+          
+          #invoice-content, #invoice-content * {
+            visibility: visible;
+          }
+          
+          #invoice-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            color: black !important;
+          }
+          
+          /* Override dark theme colors for print */
+          #invoice-content .bg-gray-900,
+          #invoice-content .bg-gray-800 {
+            background: white !important;
+            border-color: #e5e7eb !important;
+          }
+          
+          #invoice-content .text-white {
+            color: black !important;
+          }
+          
+          #invoice-content .text-gray-400,
+          #invoice-content .text-gray-300 {
+            color: #4b5563 !important;
+          }
+          
+          #invoice-content .border-gray-800,
+          #invoice-content .border-gray-700 {
+            border-color: #e5e7eb !important;
+          }
+          
+          /* Hide action buttons when printing */
+          button, .no-print {
+            display: none !important;
+          }
+          
+          @page {
+            margin: 1cm;
+          }
+        }
+      `}</style>
+
+
+
     </div>
   );
 };
 
-export default InvoiceDetails
+export default InvoiceDetails;
