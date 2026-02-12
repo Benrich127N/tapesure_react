@@ -8,7 +8,7 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Footer from "./components/Footer";
 
-import Onboarding from "./pages/Onboarding"; 
+import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Clients from "./pages/Clients";
@@ -22,9 +22,6 @@ import CalendarPage from "./pages/CalendarPage.jsx";
 import ClientDetails from "./pages/ClientDetails";
 import CreateInvoice from "./pages/CreateInvoice";
 import InvoiceDetails from "./pages/InvoiceDetails";
-
-
-
 
 function App() {
   const [user, setUser] = useState(null);
@@ -54,9 +51,9 @@ function App() {
         <Login />
       ) : (
         <div className="flex h-screen bg-black text-gray-900">
-          <Sidebar 
-            mobileOpen={mobileMenuOpen} 
-            setMobileOpen={setMobileMenuOpen} 
+          <Sidebar
+            mobileOpen={mobileMenuOpen}
+            setMobileOpen={setMobileMenuOpen}
           />
           <div className="flex flex-col flex-1 overflow-hidden">
             <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
@@ -72,6 +69,8 @@ function App() {
                 <Route path="/outfits/:id" element={<OutfitDetails />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/clients/:id" element={<ClientDetails />} />
+                <Route path="/invoices/new" element={<CreateInvoice />} />
+                <Route path="/invoices/:id" element={<InvoiceDetails />} />
               </Routes>
             </main>
             <Footer />

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
 import { signOut } from "firebase/auth";
-import {auth} from "../../firebase"
+import {auth} from "../../firebase";
 import { LayoutDashboard, Calendar,  } from 'lucide-react';
 
 
@@ -16,7 +16,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
+  ChevronDown, MessageSquare,
 } from "lucide-react";
 
 const navItems = [
@@ -33,8 +33,12 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => { // Change this line
   // Remove the local mobileOpen state since it's now passed as props
   
   const navigate = useNavigate();
+// 2. Feedback Configuration
+  const whatsappNumber = "2349063420516"; // Replace with your number
+  const feedbackMsg = encodeURIComponent("Hello! I'm using TapeSure and I have some feedback: ");
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${feedbackMsg}`;
 
-  // ... rest of your code stays the same
+
 
   // --- LOGOUT LOGIC START ---
   const handleLogout = async (e) => {
@@ -129,6 +133,21 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
             {!collapsed && <span className="ml-3">{item.name}</span>}
           </NavLink>
         ))}
+
+
+        {/* --- FEEDBACK BUTTON ADDED HERE --- */}
+          <div className="pt-4 mt-4 border-t border-gray-800">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center p-3 rounded-lg text-sm font-medium transition-colors text-green-500 hover:bg-green-500/10`}
+              title={collapsed ? "Give Feedback" : ""}
+            >
+              <MessageSquare className="h-5 w-5" />
+              {!collapsed && <span className="ml-3">Give Feedback</span>}
+            </a>
+          </div>
 
         {/* Logout Section */}
       <div className="pt-4 mt-4 border-t border-gray-800">
