@@ -7,17 +7,7 @@ import { LayoutDashboard, Calendar,  } from 'lucide-react';
 
 
 
-import {
-  Home,
-  Users,
-  Briefcase,
-  ClipboardList,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown, MessageSquare,
-} from "lucide-react";
+import { Home, Briefcase, Users, ClipboardList, Settings, X, ChevronLeft, ChevronRight, Ruler } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: Home },
@@ -26,6 +16,8 @@ const navItems = [
   { name: "Clients", path: "/clients", icon: Users },
   { name: "Invoices", path: "/invoices", icon: ClipboardList },
   { name: "Settings", path: "/settings", icon: Settings },
+  { name: "Measurements", path: "/measurements", icon: Ruler },
+
 ];
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => { // Change this line
