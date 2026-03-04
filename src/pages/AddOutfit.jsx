@@ -15,7 +15,8 @@ import {
   Ruler,
   ChevronRight,
   ChevronLeft,
-  Check
+  Check,
+  Users
 } from "lucide-react";
 
 // Helper function to auto-create client if they don't exist
@@ -59,13 +60,30 @@ const AddOutfit = () => {
     amount: "",
     status: "Pending",
     notes: "",
-    // Measurements (optional)
+    // Client gender for measurements
+    clientGender: "male",
+    // Measurements with proper sections
     measurements: {
-      chest: "",
-      waist: "",
-      hip: "",
-      sleeve: "",
-      length: "",
+      // Top measurements
+      top: {
+        shoulder: "",
+        chest: "",
+        neck: "",
+        sleeve: "",
+        sleeveCircumference: "",
+        length: ""
+      },
+      // Trouser measurements
+      trouser: {
+        waist: "",
+        hip: "",
+        lap: "",
+        crotch: "",
+        knee: "",
+        boot: "",
+        length: ""
+      },
+      // General notes
       notes: ""
     }
   });
@@ -76,7 +94,6 @@ const AddOutfit = () => {
   ];
 
   const handleNext = () => {
-    // Validate Step 1 before moving to Step 2
     if (currentStep === 1) {
       if (!formData.clientName || !formData.outfitType || !formData.dueDate || !formData.amount) {
         alert("Please fill in all required fields");
@@ -99,16 +116,28 @@ const AddOutfit = () => {
     setLoading(true);
 
     try {
-      // Auto-create client if needed
       await ensureClientExists(formData.clientName);
 
-      // Prepare measurements object
+      // Prepare measurements - only include if not skipping
       const measurementsData = skipMeasurements ? null : {
-        chest: Number(formData.measurements.chest) || 0,
-        waist: Number(formData.measurements.waist) || 0,
-        hip: Number(formData.measurements.hip) || 0,
-        sleeve: Number(formData.measurements.sleeve) || 0,
-        length: Number(formData.measurements.length) || 0,
+        clientGender: formData.clientGender,
+        top: {
+          shoulder: Number(formData.measurements.top.shoulder) || 0,
+          chest: Number(formData.measurements.top.chest) || 0,
+          neck: Number(formData.measurements.top.neck) || 0,
+          sleeve: Number(formData.measurements.top.sleeve) || 0,
+          sleeveCircumference: Number(formData.measurements.top.sleeveCircumference) || 0,
+          length: Number(formData.measurements.top.length) || 0
+        },
+        trouser: {
+          waist: Number(formData.measurements.trouser.waist) || 0,
+          hip: Number(formData.measurements.trouser.hip) || 0,
+          lap: Number(formData.measurements.trouser.lap) || 0,
+          crotch: Number(formData.measurements.trouser.crotch) || 0,
+          knee: Number(formData.measurements.trouser.knee) || 0,
+          boot: Number(formData.measurements.trouser.boot) || 0,
+          length: Number(formData.measurements.trouser.length) || 0
+        },
         notes: formData.measurements.notes || ""
       };
 
@@ -134,7 +163,7 @@ const AddOutfit = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button 
@@ -310,105 +339,337 @@ const AddOutfit = () => {
               <Ruler className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
               <div className="flex-1">
                 <h2 className="text-lg sm:text-xl font-bold text-white">Measurements (Optional)</h2>
-                <p className="text-xs sm:text-sm text-gray-500">You can skip this and add measurements later</p>
+                <p className="text-xs sm:text-sm text-gray-500">Standard tailoring measurements</p>
               </div>
             </div>
 
             <div className="bg-indigo-900/20 border border-indigo-800 rounded-lg p-3 sm:p-4 mb-4">
               <p className="text-xs sm:text-sm text-indigo-300">
-                💡 <strong>Tip:</strong> These measurements will be saved with this specific outfit. You can always edit them later.
+                💡 <strong>Tip:</strong> All measurements are in inches. You can skip this and add measurements later.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {/* Chest */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">
-                  Chest (inches)
+            {/* Gender Selection */}
+            <div className="space-y-2">
+              <label className="text-xs sm:text-sm font-medium text-gray-400 flex items-center gap-2">
+                <Users size={14} className="sm:w-4 sm:h-4" /> Client Gender
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="male"
+                    checked={formData.clientGender === "male"}
+                    onChange={(e) => setFormData({...formData, clientGender: e.target.value})}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm text-gray-300">Male</span>
                 </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.chest}
-                  placeholder="e.g. 42"
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    measurements: {...formData.measurements, chest: e.target.value}
-                  })}
-                />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="female"
+                    checked={formData.clientGender === "female"}
+                    onChange={(e) => setFormData({...formData, clientGender: e.target.value})}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm text-gray-300">Female</span>
+                </label>
               </div>
+            </div>
 
-              {/* Waist */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">
-                  Waist (inches)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.waist}
-                  placeholder="e.g. 36"
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    measurements: {...formData.measurements, waist: e.target.value}
-                  })}
-                />
+            {/* TOP MEASUREMENTS */}
+            <div className="space-y-4 pt-4 border-t border-gray-800">
+              <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                <Scissors className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                Top Measurements
+              </h3>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {/* Shoulder */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Shoulder (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.shoulder}
+                    placeholder="e.g. 18"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, shoulder: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Chest */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Chest (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.chest}
+                    placeholder="e.g. 42"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, chest: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Neck */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Neck (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.neck}
+                    placeholder="e.g. 16"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, neck: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Sleeve */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Sleeve (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.sleeve}
+                    placeholder="e.g. 24"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, sleeve: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Sleeve Circumference */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Sleeve Circ. (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.sleeveCircumference}
+                    placeholder="e.g. 14"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, sleeveCircumference: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Top Length */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Length (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.top.length}
+                    placeholder="e.g. 30"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        top: {...formData.measurements.top, length: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
               </div>
+            </div>
 
-              {/* Hip */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">
-                  Hip (inches)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.hip}
-                  placeholder="e.g. 40"
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    measurements: {...formData.measurements, hip: e.target.value}
-                  })}
-                />
-              </div>
+            {/* TROUSER MEASUREMENTS */}
+            <div className="space-y-4 pt-4 border-t border-gray-800">
+              <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                Trouser Measurements
+              </h3>
 
-              {/* Sleeve */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">
-                  Sleeve (inches)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.sleeve}
-                  placeholder="e.g. 24"
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    measurements: {...formData.measurements, sleeve: e.target.value}
-                  })}
-                />
-              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {/* Waist */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Waist (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.waist}
+                    placeholder="e.g. 34"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, waist: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
 
-              {/* Length */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">
-                  Length (inches)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.length}
-                  placeholder="e.g. 48"
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                  onChange={(e) => setFormData({
-                    ...formData, 
-                    measurements: {...formData.measurements, length: e.target.value}
-                  })}
-                />
+                {/* Hip */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Hip (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.hip}
+                    placeholder="e.g. 40"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, hip: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Lap (Thigh) */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Lap/Thigh (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.lap}
+                    placeholder="e.g. 24"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, lap: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Crotch */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Crotch (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.crotch}
+                    placeholder="e.g. 28"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, crotch: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Knee */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Knee (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.knee}
+                    placeholder="e.g. 18"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, knee: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Boot (Ankle) */}
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Boot/Ankle (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.boot}
+                    placeholder="e.g. 16"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, boot: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
+
+                {/* Trouser Length */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-400">
+                    Length (in)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.measurements.trouser.length}
+                    placeholder="e.g. 42"
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      measurements: {
+                        ...formData.measurements,
+                        trouser: {...formData.measurements.trouser, length: e.target.value}
+                      }
+                    })}
+                  />
+                </div>
               </div>
             </div>
 
