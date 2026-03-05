@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 
 import { auth } from "../firebase";
+import UpdatePrompt from "./components/UpdatePrompt"; // Add this
 
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -81,6 +82,8 @@ function App() {
             </main>
             <Footer />
             <InstallPrompt />
+                      <UpdatePrompt /> {/* Add this */}
+
           </div>
         </div>
       )}

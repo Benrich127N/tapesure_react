@@ -64,10 +64,10 @@ const Topbar = ({ onMenuClick }) => { // Add this prop
           </button>
 
           {/* Notifications */}
-          <div className="relative cursor-pointer text-gray-400 hover:text-white transition">
+          {/* <div className="relative cursor-pointer text-gray-400 hover:text-white transition">
             <Bell size={22} />
             <span className="absolute -top-1 -right-1 bg-red-500 w-2 h-2 rounded-full border-2 border-black"></span>
-          </div>
+          </div> */}
 
           {/* User Info */}
           <div className="flex items-center space-x-3 border-l border-gray-800 pl-4 sm:pl-6">
