@@ -23,6 +23,8 @@ import ClientDetails from "./pages/ClientDetails";
 import CreateInvoice from "./pages/CreateInvoice";
 import InvoiceDetails from "./pages/InvoiceDetails";
 import Measurements from "./pages/Measurements.jsx";
+import InstallPrompt from "./components/InstallPrompt";
+
 
 
 function App() {
@@ -78,6 +80,7 @@ function App() {
               </Routes>
             </main>
             <Footer />
+            <InstallPrompt />
           </div>
         </div>
       )}
