@@ -44,9 +44,28 @@ function App() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black text-white">
-        Loading...
+     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-black to-indigo-950">
+  <div className="text-center">
+    {/* Spinning Logo */}
+    <div className="relative mb-6">
+      <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto">
+        <img 
+          src="/logo.png" 
+          alt="Loading" 
+          className="w-full h-full object-contain animate-pulse"
+        />
       </div>
+      {/* Spinning Circle */}
+      <div className="absolute inset-0 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
+    </div>
+    
+    {/* Text */}
+    <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+      Tape<span className="text-indigo-400">Sure</span>
+    </h2>
+    <p className="text-sm text-gray-400 animate-pulse">Loading your workspace...</p>
+  </div>
+</div>
     );
   }
 
