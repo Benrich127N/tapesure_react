@@ -3,11 +3,22 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
 import { signOut } from "firebase/auth";
 import {auth} from "../../firebase";
-import { LayoutDashboard, Calendar,  } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Calendar,
+  MessageSquare,
+  LogOut,
+  Home,
+  Briefcase,
+  Users,
+  ClipboardList,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Ruler
+} from "lucide-react";
 
-
-
-import { Home, Briefcase, Users, ClipboardList, Settings, X, ChevronLeft, ChevronRight, Ruler } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: Home },
@@ -22,7 +33,6 @@ const navItems = [
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => { // Change this line
   const [collapsed, setCollapsed] = useState(false);
-  // Remove the local mobileOpen state since it's now passed as props
   
   const navigate = useNavigate();
 // 2. Feedback Configuration

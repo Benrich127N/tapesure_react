@@ -22,6 +22,8 @@ import CalendarPage from "./pages/CalendarPage.jsx";
 import ClientDetails from "./pages/ClientDetails";
 import CreateInvoice from "./pages/CreateInvoice";
 import InvoiceDetails from "./pages/InvoiceDetails";
+import Measurements from "./pages/Measurements.jsx";
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -71,6 +73,8 @@ function App() {
                 <Route path="/clients/:id" element={<ClientDetails />} />
                 <Route path="/invoices/new" element={<CreateInvoice />} />
                 <Route path="/invoices/:id" element={<InvoiceDetails />} />
+                <Route path="/measurements" element={<Measurements />} />
+
               </Routes>
             </main>
             <Footer />
