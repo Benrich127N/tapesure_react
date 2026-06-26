@@ -224,11 +224,11 @@ const ClientMeasurementForm = () => {
           
             href="/"
             className="text-indigo-500 hover:text-indigo-400 text-sm font-medium"
-          >
+          
             Return Home
-          </a>
+          </div>
         </div>
-      </div>
+    
     );
   }
 
