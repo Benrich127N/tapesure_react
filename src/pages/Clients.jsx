@@ -1,9 +1,30 @@
-import React, { useState } from "react";
-import { Search, Plus, Phone, Mail, MapPin, Calendar, Package, DollarSign, Edit, Trash2, Eye, User } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Search, Phone, Mail, MapPin, Calendar, Package, DollarSign, Edit, Trash2, Eye, User, Share2, Copy, Check, Ruler } from "lucide-react";
+import { getMeasurementSubmissions, getShareUrl, getShopProfile } from "../utils/shopProfile";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [submissions, setSubmissions] = useState(() => getMeasurementSubmissions());
+  const [copied, setCopied] = useState(false);
+  const shop = getShopProfile();
+  const shareUrl = getShareUrl(shop.shareSlug);
+
+  useEffect(() => {
+    const refreshSubmissions = () => setSubmissions(getMeasurementSubmissions());
+    window.addEventListener("tapesure:measurements-updated", refreshSubmissions);
+    window.addEventListener("storage", refreshSubmissions);
+    return () => {
+      window.removeEventListener("tapesure:measurements-updated", refreshSubmissions);
+      window.removeEventListener("storage", refreshSubmissions);
+    };
+  }, []);
+
+  const copyMeasurementLink = async () => {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
 
   const clients = [
     {
@@ -151,11 +172,49 @@ const Clients = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Clients Management</h1>
           <p className="text-gray-400">Manage client details, measurements, and order history</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-          <Plus className="w-5 h-5" />
-          Add New Client
+        <button onClick={copyMeasurementLink} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+          {copied ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+          {copied ? "Link copied" : "Share measurement form"}
         </button>
       </div>
+
+      <div className="rounded-xl border border-indigo-800/70 bg-indigo-950/30 p-5 md:flex md:items-center md:justify-between md:gap-6">
+        <div>
+          <div className="flex items-center gap-2 text-white"><Ruler className="h-5 w-5 text-indigo-400" /><h2 className="font-semibold">Your client measurement page</h2></div>
+          <p className="mt-2 text-sm text-gray-400">Clients will see <span className="text-gray-200">{shop.shopName}</span> and their submissions will appear below.</p>
+        </div>
+        <div className="mt-4 flex min-w-0 items-center gap-2 md:mt-0 md:max-w-md">
+          <div className="min-w-0 flex-1 truncate rounded-lg border border-gray-700 bg-black/30 px-3 py-2 text-sm text-indigo-300">{shareUrl}</div>
+          <button onClick={copyMeasurementLink} aria-label="Copy measurement link" className="rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-200 hover:bg-gray-700"><Copy className="h-4 w-4" /></button>
+        </div>
+      </div>
+
+      {submissions.length > 0 && (
+        <section className="rounded-xl border border-gray-800 bg-gray-900 p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div><h2 className="text-xl font-semibold text-white">Measurement submissions</h2><p className="mt-1 text-sm text-gray-400">Received through your shared page</p></div>
+            <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-sm font-medium text-indigo-300">{submissions.length} received</span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {submissions.map((submission) => {
+              const measurements = [...Object.entries(submission.top), ...Object.entries(submission.trouser)].filter(([, value]) => value !== null);
+              return (
+                <article key={submission.id} className="rounded-xl border border-gray-800 bg-gray-950 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div><h3 className="font-semibold text-white">{submission.clientName}</h3><p className="mt-1 text-sm text-gray-400">{submission.clientPhone}{submission.clientEmail ? ` · ${submission.clientEmail}` : ""}</p></div>
+                    <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">New</span>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {measurements.slice(0, 6).map(([name, value]) => <span key={name} className="rounded-lg bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300"><span className="capitalize text-gray-500">{name.replace(/([A-Z])/g, " $1")}</span> {value}in</span>)}
+                    {measurements.length > 6 && <span className="rounded-lg bg-gray-800 px-2.5 py-1.5 text-xs text-gray-400">+{measurements.length - 6} more</span>}
+                  </div>
+                  <p className="mt-4 text-xs text-gray-500">Submitted {new Date(submission.submittedAt).toLocaleString()}</p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
