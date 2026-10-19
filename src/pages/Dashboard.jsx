@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { db, auth } from "../../firebase";
 import {
   Calendar,
@@ -10,6 +11,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Plus,
+  Store,
 } from "lucide-react";
 import {
   collection,
@@ -20,7 +23,8 @@ import {
   limit,
 } from "firebase/firestore";
 
-const Dashboard = () => {
+const Dashboard = ({ shopName }) => {
+  const navigate = useNavigate();
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +80,9 @@ const Dashboard = () => {
   // --- Real-time Calculations ---
   const totalOrders = outfits.length;
   const overdueCount = outfits.filter((o) => o.status === "Delayed").length;
-  const uniqueClients = [...new Set(outfits.map((o) => o.clientName))].length;
+  const uniqueClients = [
+    ...new Set(outfits.map((o) => o.clientId || o.clientName)),
+  ].length;
 
   const totalRevenue = outfits
     .filter((o) => o.status === "Delivered")
@@ -115,7 +121,7 @@ const Dashboard = () => {
       icon: Users,
       color: "text-green-400",
       bgColor: "bg-green-900/20",
-      change: "Unique names",
+      change: "Customers served",
     },
     {
       title: "Expected Revenue",
@@ -123,7 +129,7 @@ const Dashboard = () => {
       icon: DollarSign,
       color: "text-yellow-400",
       bgColor: "bg-yellow-900/20",
-      change: "Total project value",
+      change: "Total order value",
     },
     {
       title: "Delayed Orders",
@@ -205,11 +211,15 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
+          <div className="flex items-center gap-2 text-indigo-400 mb-1">
+            <Store className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-widest">{shopName}</span>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-            Dashboard Overview
+            Welcome to {shopName}
           </h1>
           <p className="text-sm sm:text-base text-gray-400">
-            Live summary of your Tapsure projects.
+            Here is today&apos;s customer and order summary.
           </p>
         </div>
         <div className="sm:text-right">
@@ -266,7 +276,15 @@ const Dashboard = () => {
           {loading ? (
             <div className="text-center py-10 text-gray-500">Loading...</div>
           ) : outfits.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">No orders yet</div>
+            <div className="text-center py-10">
+              <p className="text-gray-400 mb-4">Create your first customer order to get started.</p>
+              <button
+                onClick={() => navigate("/outfits/new")}
+                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+              >
+                <Plus className="w-4 h-4" /> New Order
+              </button>
+            </div>
           ) : (
             outfits.map((order) => (
               <div
@@ -341,7 +359,15 @@ const Dashboard = () => {
               ) : outfits.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="text-center py-10 text-gray-500">
-                    No orders yet
+                    <div className="py-4">
+                      <p className="text-gray-400 mb-4">Create your first customer order to get started.</p>
+                      <button
+                        onClick={() => navigate("/outfits/new")}
+                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+                      >
+                        <Plus className="w-4 h-4" /> New Order
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -423,7 +449,10 @@ const Dashboard = () => {
                       {reminder.time}
                     </div>
                     {/* Action Button */}
-                    <button className="text-[10px] text-indigo-400 font-bold hover:underline">
+                    <button
+                      onClick={() => navigate(`/outfits/${reminder.id}`)}
+                      className="text-[10px] text-indigo-400 font-bold hover:underline"
+                    >
                       View Order
                     </button>
                   </div>

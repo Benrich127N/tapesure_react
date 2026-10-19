@@ -397,6 +397,7 @@ const OutfitDetails = () => {
                   className="w-full bg-black border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
                   <option value="Pending">Pending</option>
+                  <option value="Received">Received</option>
                   <option value="Cutting">Cutting</option>
                   <option value="Sewing">Sewing</option>
                   <option value="Fitting">Fitting</option>

@@ -1,10 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
 
-import { auth } from "../firebase";
-import UpdatePrompt from "./components/UpdatePrompt"; // Add this
-
+import { auth, db } from "../firebase";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Footer from "./components/Footer";
@@ -30,16 +29,43 @@ import InstallPrompt from "./components/InstallPrompt";
 
 function App() {
   const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Add this
 
   useEffect(() => {
+    let unsubscribeProfile;
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+
+      if (unsubscribeProfile) unsubscribeProfile();
+
+      if (!currentUser) {
+        setUserProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      unsubscribeProfile = onSnapshot(
+        doc(db, "users", currentUser.uid),
+        (snapshot) => {
+          setUserProfile(snapshot.exists() ? snapshot.data() : null);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Unable to load shop profile:", error);
+          setUserProfile(null);
+          setLoading(false);
+        },
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   if (loading) {
@@ -73,6 +99,10 @@ function App() {
     <Router>
       {!user ? (
         <Login />
+      ) : !userProfile?.onboardingCompleted || !userProfile?.shopName?.trim() ? (
+        <Routes>
+          <Route path="*" element={<Onboarding />} />
+        </Routes>
       ) : (
         <div className="flex h-screen bg-black text-gray-900">
           <Sidebar
@@ -83,12 +113,12 @@ function App() {
             <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
             <main className="flex-1 p-6 overflow-auto bg-black">
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={<Dashboard shopName={userProfile.shopName} />} />
                 <Route path="/outfits" element={<Outfits />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding" element={<Navigate to="/outfits/new" replace />} />
                 <Route path="/outfits/new" element={<AddOutfit />} />
                 <Route path="/outfits/:id" element={<OutfitDetails />} />
                 <Route path="/calendar" element={<CalendarPage />} />
@@ -101,8 +131,6 @@ function App() {
             </main>
             <Footer />
             <InstallPrompt />
-                      <UpdatePrompt /> {/* Add this */}
-
           </div>
         </div>
       )}

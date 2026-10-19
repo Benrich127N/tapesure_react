@@ -1,68 +1,71 @@
-// src/pages/AddOutfit.jsx
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, auth } from "../../firebase";
-import { 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  getDocs, 
-  query, 
-  where 
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
 } from "firebase/firestore";
-import { 
-  ArrowLeft, 
-  Save, 
-  User, 
-  Zap,
-  Calendar as CalendarIcon
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  UserPlus,
 } from "lucide-react";
 
-// Helper function to auto-create client
-const ensureClientExists = async (clientName) => {
-  if (!clientName.trim() || !auth.currentUser) return;
-
-  const clientsRef = collection(db, "clients");
-  const q = query(
-    clientsRef,
-    where("userId", "==", auth.currentUser.uid),
-    where("name", "==", clientName.trim())
-  );
-
-  const snapshot = await getDocs(q);
-  
-  if (snapshot.empty) {
-    await addDoc(clientsRef, {
-      userId: auth.currentUser.uid,
-      name: clientName.trim(),
-      phone: "", 
-      email: "",
-      createdAt: serverTimestamp()
-    });
-  }
+const getDefaultDueDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split("T")[0];
 };
+
+const measurementFields = [
+  "shoulder",
+  "chest",
+  "neck",
+  "sleeve",
+  "sleeveCirc",
+  "topLength",
+  "waist",
+  "hip",
+  "lap",
+  "crotch",
+  "knee",
+  "boot",
+  "trouserLength",
+];
 
 const AddOutfit = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedClientId = searchParams.get("clientId");
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState([]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  
+  const [selectedClientId, setSelectedClientId] = useState("new");
+  const [showDateShortcuts, setShowDateShortcuts] = useState(false);
+  const [showMeasurements, setShowMeasurements] = useState(false);
+  const [showExtraDetails, setShowExtraDetails] = useState(false);
   const [formData, setFormData] = useState({
     clientName: "",
+    clientPhone: "",
     outfitType: "",
-    status: "Cutting",
-    dueDate: "",
+    status: "Received",
+    dueDate: getDefaultDueDate(),
     amount: "",
     clientGender: "male",
-    // Top measurements
     shoulder: "",
     chest: "",
     neck: "",
     sleeve: "",
     sleeveCirc: "",
     topLength: "",
-    // Trouser measurements
     waist: "",
     hip: "",
     lap: "",
@@ -70,333 +73,424 @@ const AddOutfit = () => {
     knee: "",
     boot: "",
     trouserLength: "",
-    notes: ""
+    notes: "",
   });
 
-  // Fetch existing clients for autocomplete
   useEffect(() => {
     const fetchClients = async () => {
       if (!auth.currentUser) return;
 
-      const q = query(
-        collection(db, "clients"),
-        where("userId", "==", auth.currentUser.uid)
+      const snapshot = await getDocs(
+        query(
+          collection(db, "clients"),
+          where("userId", "==", auth.currentUser.uid),
+        ),
       );
 
-      const snapshot = await getDocs(q);
-      const clientsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      setClients(clientsData);
+      const loadedClients = snapshot.docs.map((clientDoc) => ({
+          id: clientDoc.id,
+          ...clientDoc.data(),
+        }));
+
+      setClients(loadedClients);
+
+      const requestedClient = loadedClients.find(
+        (client) => client.id === requestedClientId,
+      );
+      if (requestedClient) {
+        setSelectedClientId(requestedClient.id);
+        setFormData((current) => ({
+          ...current,
+          clientName: requestedClient.name || "",
+          clientPhone: requestedClient.phone || "",
+        }));
+      }
     };
 
-    fetchClients();
-  }, []);
+    fetchClients().catch((error) => {
+      console.error("Unable to load customers:", error);
+    });
+  }, [requestedClientId]);
 
-  // Auto-fill client info when selected
-  const handleClientSelect = (clientName) => {
-    setFormData(prev => ({ ...prev, clientName }));
+  const updateField = (field, value) => {
+    setFormData((current) => ({ ...current, [field]: value }));
   };
 
-  // Quick date shortcuts
+  const selectClient = (clientId) => {
+    setSelectedClientId(clientId);
+
+    if (clientId === "new") {
+      setFormData((current) => ({
+        ...current,
+        clientName: "",
+        clientPhone: "",
+      }));
+      return;
+    }
+
+    const client = clients.find((item) => item.id === clientId);
+    if (client) {
+      setFormData((current) => ({
+        ...current,
+        clientName: client.name || "",
+        clientPhone: client.phone || "",
+      }));
+    }
+  };
+
   const setQuickDate = (days) => {
     const date = new Date();
     date.setDate(date.getDate() + days);
-    setFormData(prev => ({ 
-      ...prev, 
-      dueDate: date.toISOString().split('T')[0] 
-    }));
-    setShowDatePicker(false);
+    updateField("dueDate", date.toISOString().split("T")[0]);
+    setShowDateShortcuts(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Minimum validation - only client name required
-    if (!formData.clientName.trim()) {
-      alert("Client name is required");
+  const saveClient = async () => {
+    if (selectedClientId !== "new") {
+      const existingClient = clients.find(
+        (client) => client.id === selectedClientId,
+      );
+
+      if (existingClient?.phone !== formData.clientPhone.trim()) {
+        await updateDoc(doc(db, "clients", selectedClientId), {
+          phone: formData.clientPhone.trim(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      return selectedClientId;
+    }
+
+    const clientRef = await addDoc(collection(db, "clients"), {
+      userId: auth.currentUser.uid,
+      name: formData.clientName.trim(),
+      phone: formData.clientPhone.trim(),
+      email: "",
+      createdAt: serverTimestamp(),
+    });
+
+    return clientRef.id;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!formData.clientName.trim() || !formData.clientPhone.trim()) {
+      alert("Customer name and phone number are required.");
+      return;
+    }
+
+    if (!formData.outfitType.trim() || !formData.dueDate) {
+      alert("Outfit type and delivery date are required.");
       return;
     }
 
     setSaving(true);
 
     try {
-      await ensureClientExists(formData.clientName);
+      const clientId = await saveClient();
+      const hasMeasurements = measurementFields.some(
+        (field) => formData[field] !== "",
+      );
 
-      // Only save measurements if at least one is filled
-      const hasMeasurements = 
-        formData.shoulder || formData.chest || formData.neck || 
-        formData.sleeve || formData.sleeveCirc || formData.topLength ||
-        formData.waist || formData.hip || formData.lap || 
-        formData.crotch || formData.knee || formData.boot || formData.trouserLength;
+      const measurements = hasMeasurements
+        ? {
+            clientGender: formData.clientGender,
+            top: {
+              shoulder: Number(formData.shoulder) || 0,
+              chest: Number(formData.chest) || 0,
+              neck: Number(formData.neck) || 0,
+              sleeve: Number(formData.sleeve) || 0,
+              sleeveCircumference: Number(formData.sleeveCirc) || 0,
+              length: Number(formData.topLength) || 0,
+            },
+            trouser: {
+              waist: Number(formData.waist) || 0,
+              hip: Number(formData.hip) || 0,
+              lap: Number(formData.lap) || 0,
+              crotch: Number(formData.crotch) || 0,
+              knee: Number(formData.knee) || 0,
+              boot: Number(formData.boot) || 0,
+              length: Number(formData.trouserLength) || 0,
+            },
+            notes: formData.notes.trim(),
+          }
+        : null;
 
-      const measurementsData = hasMeasurements ? {
-        clientGender: formData.clientGender,
-        top: {
-          shoulder: Number(formData.shoulder) || 0,
-          chest: Number(formData.chest) || 0,
-          neck: Number(formData.neck) || 0,
-          sleeve: Number(formData.sleeve) || 0,
-          sleeveCircumference: Number(formData.sleeveCirc) || 0,
-          length: Number(formData.topLength) || 0
-        },
-        trouser: {
-          waist: Number(formData.waist) || 0,
-          hip: Number(formData.hip) || 0,
-          lap: Number(formData.lap) || 0,
-          crotch: Number(formData.crotch) || 0,
-          knee: Number(formData.knee) || 0,
-          boot: Number(formData.boot) || 0,
-          length: Number(formData.trouserLength) || 0
-        },
-        notes: formData.notes || ""
-      } : null;
-
-      await addDoc(collection(db, "outfits"), {
+      const orderRef = await addDoc(collection(db, "outfits"), {
         userId: auth.currentUser.uid,
+        clientId,
         clientName: formData.clientName.trim(),
-        outfitType: formData.outfitType || "Not specified",
+        clientPhone: formData.clientPhone.trim(),
+        outfitType: formData.outfitType.trim(),
         status: formData.status,
-        dueDate: formData.dueDate || new Date().toISOString().split('T')[0],
+        dueDate: formData.dueDate,
         amount: Number(formData.amount) || 0,
-        notes: formData.notes,
-        measurements: measurementsData,
-        createdAt: serverTimestamp()
+        notes: formData.notes.trim(),
+        measurements,
+        createdAt: serverTimestamp(),
       });
 
-      // Success! Go back
-      navigate("/outfits");
+      localStorage.setItem("tapesure-first-order-created", "true");
+      window.dispatchEvent(new Event("tapesure:order-created"));
+      navigate(`/outfits/${orderRef.id}`, { replace: true });
     } catch (error) {
-      console.error("Error saving:", error);
-      alert("Failed to save. Please try again.");
+      console.error("Error saving order:", error);
+      alert("Failed to save the order. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
+  const MeasurementInput = ({ field, label }) => (
+    <input
+      type="number"
+      min="0"
+      step="0.5"
+      value={formData[field]}
+      onChange={(event) => updateField(field, event.target.value)}
+      placeholder={label}
+      aria-label={`${label} measurement in inches`}
+      className="bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-indigo-500 outline-none"
+    />
+  );
+
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-8">
-      {/* Ultra-compact header */}
+    <div className="w-full max-w-4xl mx-auto space-y-4 pb-8">
       <div className="flex items-center justify-between">
-        <button 
-          onClick={() => navigate("/outfits")}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
           className="flex items-center text-gray-400 hover:text-white transition text-sm"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </button>
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-yellow-400" />
-          <h1 className="text-lg sm:text-xl font-bold text-white">Quick Add</h1>
+        <div className="text-right">
+          <h1 className="text-xl sm:text-2xl font-bold text-white">New Order</h1>
+          <p className="text-xs text-gray-500">Customer first, details when you need them</p>
         </div>
       </div>
 
-      {/* Single-page form */}
-      <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 space-y-3 sm:space-y-4">
-        
-        {/* Essential Info - Always visible */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pb-3 border-b border-gray-800">
-          {/* Client Name - with autocomplete */}
-          <div className="relative sm:col-span-2">
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Client Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              required
-              type="text"
-              list="clients"
-              value={formData.clientName}
-              onChange={(e) => setFormData({...formData, clientName: e.target.value})}
-              placeholder="Type or select client"
-              className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              autoFocus
-            />
-            <datalist id="clients">
-              {clients.map(client => (
-                <option key={client.id} value={client.name} />
-              ))}
-            </datalist>
+      <form
+        onSubmit={handleSubmit}
+        className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 space-y-5"
+      >
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">1</div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Customer</h2>
+              <p className="text-xs text-gray-500">Choose a returning customer or add a new one.</p>
+            </div>
           </div>
 
-          {/* Outfit Type */}
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Outfit Type
-            </label>
-            <input
-              type="text"
-              value={formData.outfitType}
-              onChange={(e) => setFormData({...formData, outfitType: e.target.value})}
-              placeholder="e.g. Kaftan, Suit"
-              className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
-          </div>
-
-          {/* Status - Quick select */}
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
-              className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-            >
-              <option value="Cutting">Cutting</option>
-              <option value="Sewing">Sewing</option>
-              <option value="Fitting">Fitting</option>
-              <option value="Ready">Ready</option>
-              <option value="Delivered">Delivered</option>
-            </select>
-          </div>
-
-          {/* Due Date - Quick shortcuts */}
-          <div className="relative">
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Due Date
-            </label>
-            <div className="flex gap-1">
-              <input
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                className="flex-1 bg-black border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className="bg-gray-800 hover:bg-gray-700 text-white px-2 rounded-lg text-xs transition"
+          {clients.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Customer</label>
+              <select
+                value={selectedClientId}
+                onChange={(event) => selectClient(event.target.value)}
+                className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                <CalendarIcon className="w-4 h-4" />
-              </button>
+                <option value="new">+ Add a new customer</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}{client.phone ? ` — ${client.phone}` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            {showDatePicker && (
-              <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg p-2 z-10 flex flex-wrap gap-1 shadow-lg">
-                <button type="button" onClick={() => setQuickDate(3)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">3 days</button>
-                <button type="button" onClick={() => setQuickDate(7)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">1 week</button>
-                <button type="button" onClick={() => setQuickDate(14)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">2 weeks</button>
-                <button type="button" onClick={() => setQuickDate(30)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">1 month</button>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Customer name <span className="text-red-400">*</span></label>
+              <input
+                required
+                type="text"
+                value={formData.clientName}
+                onChange={(event) => updateField("clientName", event.target.value)}
+                readOnly={selectedClientId !== "new"}
+                placeholder="e.g. Ada Okafor"
+                autoFocus={clients.length === 0}
+                className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none read-only:text-gray-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Phone number <span className="text-red-400">*</span></label>
+              <input
+                required
+                type="tel"
+                value={formData.clientPhone}
+                onChange={(event) => updateField("clientPhone", event.target.value)}
+                placeholder="e.g. 0801 234 5678"
+                className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3 pt-5 border-t border-gray-800">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">2</div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Order</h2>
+              <p className="text-xs text-gray-500">Capture what you are making and when it is due.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Outfit type <span className="text-red-400">*</span></label>
+              <input
+                required
+                type="text"
+                value={formData.outfitType}
+                onChange={(event) => updateField("outfitType", event.target.value)}
+                placeholder="e.g. Kaftan, gown, suit"
+                className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div className="relative">
+              <label className="block text-xs font-medium text-gray-400 mb-1">Delivery date <span className="text-red-400">*</span></label>
+              <div className="flex gap-2">
+                <input
+                  required
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(event) => updateField("dueDate", event.target.value)}
+                  className="flex-1 bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label="Choose a quick delivery date"
+                  onClick={() => setShowDateShortcuts((current) => !current)}
+                  className="bg-gray-800 hover:bg-gray-700 text-white px-3 rounded-lg"
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                </button>
               </div>
-            )}
-          </div>
-
-          {/* Amount - Optional */}
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Amount (₦) <span className="text-gray-600 text-[10px]">optional</span>
-            </label>
-            <input
-              type="number"
-              value={formData.amount}
-              onChange={(e) => setFormData({...formData, amount: e.target.value})}
-              placeholder="0"
-              className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Gender Toggle - Compact */}
-        <div className="flex items-center gap-4 py-2 border-b border-gray-800">
-          <span className="text-xs font-medium text-gray-400">Gender:</span>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="radio"
-              name="gender"
-              value="male"
-              checked={formData.clientGender === "male"}
-              onChange={(e) => setFormData({...formData, clientGender: e.target.value})}
-              className="w-3 h-3 text-indigo-600"
-            />
-            <span className="text-xs text-gray-300">Male</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="radio"
-              name="gender"
-              value="female"
-              checked={formData.clientGender === "female"}
-              onChange={(e) => setFormData({...formData, clientGender: e.target.value})}
-              className="w-3 h-3 text-indigo-600"
-            />
-            <span className="text-xs text-gray-300">Female</span>
-          </label>
-        </div>
-
-        {/* Measurements - Compact grid */}
-        <div className="space-y-3">
-          {/* TOP */}
-          <div>
-            <h3 className="text-xs font-semibold text-yellow-400 mb-2 uppercase tracking-wide">Top Measurements (inches)</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              <input type="number" step="0.5" value={formData.shoulder} onChange={(e) => setFormData({...formData, shoulder: e.target.value})} placeholder="Shoulder" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
-              <input type="number" step="0.5" value={formData.chest} onChange={(e) => setFormData({...formData, chest: e.target.value})} placeholder="Chest" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
-              <input type="number" step="0.5" value={formData.neck} onChange={(e) => setFormData({...formData, neck: e.target.value})} placeholder="Neck" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
-              <input type="number" step="0.5" value={formData.sleeve} onChange={(e) => setFormData({...formData, sleeve: e.target.value})} placeholder="Sleeve" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
-              <input type="number" step="0.5" value={formData.sleeveCirc} onChange={(e) => setFormData({...formData, sleeveCirc: e.target.value})} placeholder="S.Circ" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
-              <input type="number" step="0.5" value={formData.topLength} onChange={(e) => setFormData({...formData, topLength: e.target.value})} placeholder="Length" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-yellow-500 outline-none" />
+              {showDateShortcuts && (
+                <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg p-2 z-10 flex flex-wrap gap-1 shadow-lg">
+                  {[3, 7, 14, 30].map((days) => (
+                    <button key={days} type="button" onClick={() => setQuickDate(days)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">
+                      {days === 7 ? "1 week" : days === 14 ? "2 weeks" : days === 30 ? "1 month" : "3 days"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        </section>
 
-          {/* TROUSER */}
-          <div>
-            <h3 className="text-xs font-semibold text-green-400 mb-2 uppercase tracking-wide">Trouser Measurements (inches)</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-              <input type="number" step="0.5" value={formData.waist} onChange={(e) => setFormData({...formData, waist: e.target.value})} placeholder="Waist" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.hip} onChange={(e) => setFormData({...formData, hip: e.target.value})} placeholder="Hip" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.lap} onChange={(e) => setFormData({...formData, lap: e.target.value})} placeholder="Lap" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.crotch} onChange={(e) => setFormData({...formData, crotch: e.target.value})} placeholder="Crotch" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.knee} onChange={(e) => setFormData({...formData, knee: e.target.value})} placeholder="Knee" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.boot} onChange={(e) => setFormData({...formData, boot: e.target.value})} placeholder="Boot" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-              <input type="number" step="0.5" value={formData.trouserLength} onChange={(e) => setFormData({...formData, trouserLength: e.target.value})} placeholder="Length" className="bg-black border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-green-500 outline-none" />
-            </div>
-          </div>
-
-          {/* Notes - Compact */}
-          <div>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              placeholder="Quick notes (optional)..."
-              rows="2"
-              className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
-            ></textarea>
-          </div>
-        </div>
-
-        {/* Save Button - Prominent */}
-        <div className="pt-2">
+        <section className="pt-4 border-t border-gray-800">
           <button
-            type="submit"
-            disabled={saving}
-            className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition text-sm sm:text-base ${
-              saving 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 shadow-lg'
-            }`}
+            type="button"
+            onClick={() => setShowMeasurements((current) => !current)}
+            className="w-full flex items-center justify-between text-left py-2"
           >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Save Order
-              </>
-            )}
+            <span>
+              <span className="block text-sm font-semibold text-white">Measurements</span>
+              <span className="block text-xs text-gray-500">Optional — add them now or later</span>
+            </span>
+            {showMeasurements ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
           </button>
+
+          {showMeasurements && (
+            <div className="space-y-4 pt-3">
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-gray-400">Customer:</span>
+                {[
+                  ["male", "Male"],
+                  ["female", "Female"],
+                ].map(([value, label]) => (
+                  <label key={value} className="flex items-center gap-1.5 text-xs text-gray-300">
+                    <input type="radio" name="gender" value={value} checked={formData.clientGender === value} onChange={(event) => updateField("clientGender", event.target.value)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-yellow-400 mb-2 uppercase tracking-wide">Top measurements (inches)</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  <MeasurementInput field="shoulder" label="Shoulder" />
+                  <MeasurementInput field="chest" label="Chest" />
+                  <MeasurementInput field="neck" label="Neck" />
+                  <MeasurementInput field="sleeve" label="Sleeve" />
+                  <MeasurementInput field="sleeveCirc" label="Sleeve circ." />
+                  <MeasurementInput field="topLength" label="Top length" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-green-400 mb-2 uppercase tracking-wide">Trouser measurements (inches)</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                  <MeasurementInput field="waist" label="Waist" />
+                  <MeasurementInput field="hip" label="Hip" />
+                  <MeasurementInput field="lap" label="Lap" />
+                  <MeasurementInput field="crotch" label="Crotch" />
+                  <MeasurementInput field="knee" label="Knee" />
+                  <MeasurementInput field="boot" label="Boot" />
+                  <MeasurementInput field="trouserLength" label="Trouser length" />
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="pt-4 border-t border-gray-800">
+          <button
+            type="button"
+            onClick={() => setShowExtraDetails((current) => !current)}
+            className="w-full flex items-center justify-between text-left py-2"
+          >
+            <span>
+              <span className="block text-sm font-semibold text-white">Price, status and notes</span>
+              <span className="block text-xs text-gray-500">Optional order details</span>
+            </span>
+            {showExtraDetails ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+          </button>
+
+          {showExtraDetails && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Amount (₦)</label>
+                <input type="number" min="0" value={formData.amount} onChange={(event) => updateField("amount", event.target.value)} placeholder="0" className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Status</label>
+                <select value={formData.status} onChange={(event) => updateField("status", event.target.value)} className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                  <option value="Received">Received</option>
+                  <option value="Cutting">Cutting</option>
+                  <option value="Sewing">Sewing</option>
+                  <option value="Fitting">Fitting</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Notes</label>
+                <textarea value={formData.notes} onChange={(event) => updateField("notes", event.target.value)} placeholder="Style, fabric or fitting notes..." rows="3" className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className={`w-full py-3.5 rounded-lg font-bold flex items-center justify-center gap-2 transition ${saving ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95 shadow-lg"}`}
+        >
+          {saving ? (
+            <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving order...</>
+          ) : (
+            <><Save className="w-5 h-5" /> Save Customer Order</>
+          )}
+        </button>
+
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+          <UserPlus className="w-4 h-4" /> New customers are saved automatically for future orders.
         </div>
       </form>
-
-      {/* Quick tip */}
-      <div className="bg-indigo-900/20 border border-indigo-800 rounded-lg p-2 sm:p-3">
-        <p className="text-[10px] sm:text-xs text-indigo-300 text-center">
-          💡 <strong>Tip:</strong> Only client name is required. Add measurements as you take them - save time!
-        </p>
-      </div>
     </div>
   );
 };

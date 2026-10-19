@@ -138,13 +138,15 @@ const Clients = () => {
   };
 
   // Get client's outfit count - NOW USING REAL DATA
-  const getClientOrders = (clientName) => {
-    return outfits.filter(outfit => outfit.clientName === clientName).length;
+  const getClientOrders = (client) => {
+    return outfits.filter(outfit =>
+      outfit.clientId ? outfit.clientId === client.id : outfit.clientName === client.name
+    ).length;
   };
 
   const stats = [
     { 
-      label: "Total Clients", 
+      label: "Total Customers", 
       value: clients.length, 
       icon: User, 
       color: "indigo" 
@@ -169,10 +171,10 @@ const Clients = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
-            Clients Management
+            Customers
           </h1>
           <p className="text-sm sm:text-base text-gray-400">
-            Manage client details and contact information
+            Manage customer details, measurements, and order history
           </p>
         </div>
         <button 
@@ -180,7 +182,7 @@ const Clients = () => {
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition active:scale-95 text-sm sm:text-base"
         >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          Add New Client
+          Add New Customer
         </button>
       </div>
 
@@ -224,7 +226,7 @@ const Clients = () => {
       {!loading && filteredClients.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {filteredClients.map((client) => {
-            const orderCount = getClientOrders(client.name);
+            const orderCount = getClientOrders(client);
             
             return (
               <div 
@@ -318,12 +320,12 @@ const Clients = () => {
         <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-8 sm:p-12 text-center">
           <User className="w-12 h-12 sm:w-16 sm:h-16 text-gray-700 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-400 mb-2">
-            {searchTerm ? "No clients found" : "No clients yet"}
+            {searchTerm ? "No customers found" : "No customers yet"}
           </h3>
           <p className="text-sm sm:text-base text-gray-500 mb-4">
             {searchTerm 
               ? "Try adjusting your search criteria" 
-              : "Clients will appear here when you create outfits"
+              : "Customers will appear here when you create orders"
             }
           </p>
           {!searchTerm && (
@@ -332,7 +334,7 @@ const Clients = () => {
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Add First Client
+              Add First Customer
             </button>
           )}
         </div>
@@ -344,7 +346,7 @@ const Clients = () => {
           <div className="bg-gray-900 rounded-xl border border-gray-800 w-full max-w-md">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-800">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Add New Client</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-white">Add New Customer</h2>
               <button 
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-white transition"
@@ -357,7 +359,7 @@ const Clients = () => {
             <form onSubmit={handleAddClient} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Client Name <span className="text-red-400">*</span>
+                  Customer Name <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -398,7 +400,7 @@ const Clients = () => {
 
               <div className="bg-indigo-900/20 border border-indigo-800 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-indigo-300">
-                  💡 <strong>Tip:</strong> Measurements will be added when you create an outfit for this client.
+                  💡 <strong>Tip:</strong> Measurements can be added when you create an order for this customer.
                 </p>
               </div>
 
@@ -415,7 +417,7 @@ const Clients = () => {
                   type="submit"
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition"
                 >
-                  Add Client
+                  Add Customer
                 </button>
               </div>
             </form>

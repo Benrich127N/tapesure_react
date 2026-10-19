@@ -19,7 +19,7 @@ const Outfits = () => {
   // STATS should always reflect the TOTAL data (not filtered)
   const stats = {
     total: outfits.length,
-    inProgress: outfits.filter((o) => ["In Progress", "Sewing", "Cutting", "Fitting"].includes(o.status)).length,
+    inProgress: outfits.filter((o) => ["Received", "In Progress", "Sewing", "Cutting", "Fitting"].includes(o.status)).length,
     delivered: outfits.filter((o) => o.status === "Delivered").length,
     delayed: outfits.filter((o) => o.status === "Delayed").length,
   };
@@ -34,7 +34,7 @@ const Outfits = () => {
 
   const outfitStats = [
     {
-      title: "Total Outfits",
+      title: "Total Orders",
       value: stats.total,
       color: "text-indigo-400",
       bg: "bg-indigo-900/20",
@@ -121,10 +121,10 @@ const Outfits = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
-            Outfit Management
+            Order Management
           </h1>
           <p className="text-sm sm:text-base text-gray-400">
-            Track, monitor, and manage all outfit projects.
+            Track every customer order from intake to delivery.
           </p>
         </div>
         <div className="text-left sm:text-right">
@@ -165,12 +165,12 @@ const Outfits = () => {
       {/* Outfits Table */}
       <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-bold text-white">Recent Outfits</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-white">Recent Orders</h2>
           <button
             onClick={() => navigate("/outfits/new")}
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition flex items-center justify-center gap-2 active:scale-95"
           >
-            <Plus size={18} /> New Outfit
+            <Plus size={18} /> New Order
           </button>
         </div>
 
@@ -182,7 +182,7 @@ const Outfits = () => {
             </div>
           ) : filteredOutfits.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
-              No outfits found. Click "+ New Outfit" to start.
+              No orders found. Click "+ New Order" to start.
             </div>
           ) : (
             filteredOutfits.map((outfit) => (
@@ -279,7 +279,7 @@ const Outfits = () => {
               ) : filteredOutfits.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-8 text-center text-gray-500">
-                    No outfits found. Click "+ New Outfit" to start.
+                    No orders found. Click "+ New Order" to start.
                   </td>
                 </tr>
               ) : (

@@ -22,9 +22,9 @@ import {
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: Home },
-  { name: "Outfits", path: "/outfits", icon: Briefcase },
+  { name: "Orders", path: "/outfits", icon: Briefcase },
   { name: "Calendar", path: "/calendar", icon: Calendar }, 
-  { name: "Clients", path: "/clients", icon: Users },
+  { name: "Customers", path: "/clients", icon: Users },
   { name: "Invoices", path: "/invoices", icon: ClipboardList },
   { name: "Settings", path: "/settings", icon: Settings },
   { name: "Measurements", path: "/measurements", icon: Ruler },

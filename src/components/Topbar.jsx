@@ -44,7 +44,7 @@ const Topbar = ({ onMenuClick }) => { // Add this prop
             </span>
             <input
               type="text"
-              placeholder="Search projects or clients..."
+              placeholder="Search orders or customers..."
               value={query}
               onChange={handleSearch}
               className="w-full bg-gray-900 text-white placeholder-gray-500 border border-gray-800 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
@@ -60,7 +60,7 @@ const Topbar = ({ onMenuClick }) => { // Add this prop
             onClick={() => navigate("/outfits/new")}
             className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-indigo-500 transition active:scale-95 shadow-lg shadow-indigo-500/20 font-medium text-sm"
           >
-            <Plus size={18} /> <span className="hidden sm:inline">Add Order</span>
+            <Plus size={18} /> <span className="hidden sm:inline">New Order</span>
           </button>
 
           {/* Notifications */}

@@ -8,17 +8,14 @@ const InstallPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
 
-    // Check if already dismissed
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     const dismissedTime = localStorage.getItem('pwa-install-dismissed-time');
-    
-    // Show again after 7 days
+
     if (dismissed && dismissedTime) {
       const daysSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24);
       if (daysSinceDismissed < 7) {
@@ -26,31 +23,47 @@ const InstallPrompt = () => {
       }
     }
 
-    // Android - Listen for beforeinstallprompt
+    const visitCount = Number(localStorage.getItem('tapesure-visit-count') || 0) + 1;
+    localStorage.setItem('tapesure-visit-count', String(visitCount));
+
+    let eligible =
+      localStorage.getItem('tapesure-first-order-created') === 'true' ||
+      visitCount >= 2;
+    let pendingAndroidPrompt = null;
+    let promptTimer;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone;
+
+    const schedulePrompt = (delay = 30000) => {
+      window.clearTimeout(promptTimer);
+      promptTimer = window.setTimeout(() => {
+        if (!eligible) return;
+        if (pendingAndroidPrompt) setShowAndroidPrompt(true);
+        if (isIOS && !isStandalone) setShowIOSPrompt(true);
+      }, delay);
+    };
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
+      pendingAndroidPrompt = e;
       setDeferredPrompt(e);
-      
-      // Wait 30 seconds before showing prompt (let user explore first)
-      setTimeout(() => {
-        setShowAndroidPrompt(true);
-      }, 30000);
+      if (eligible) schedulePrompt();
+    };
+
+    const handleOrderCreated = () => {
+      eligible = true;
+      schedulePrompt(5000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // iOS - Check if Safari on iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.navigator.standalone;
-    
-    if (isIOS && !isStandalone) {
-      setTimeout(() => {
-        setShowIOSPrompt(true);
-      }, 30000);
-    }
+    window.addEventListener('tapesure:order-created', handleOrderCreated);
+    if (eligible && isIOS && !isStandalone) schedulePrompt();
 
     return () => {
+      window.clearTimeout(promptTimer);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('tapesure:order-created', handleOrderCreated);
     };
   }, []);
 

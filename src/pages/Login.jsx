@@ -12,7 +12,6 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import {
   Mail,
   Lock,
-  User,
   Eye,
   EyeOff,
   LogIn,
@@ -28,17 +27,14 @@ const Login = () => {
   const [mode, setMode] = useState("login"); // "login" or "signup"
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: "",
     email: "",
     password: "",
-    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -46,10 +42,6 @@ const Login = () => {
   // Validation
   const validateForm = () => {
     const newErrors = {};
-
-    if (mode === "signup" && !formData.fullName.trim()) {
-      newErrors.fullName = "Full name is required";
-    }
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
@@ -61,14 +53,6 @@ const Login = () => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (mode === "signup") {
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password";
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords don't match";
-      }
     }
 
     setErrors(newErrors);
@@ -128,7 +112,6 @@ const Login = () => {
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        fullName: formData.fullName,
         role: "tailor",
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
@@ -207,10 +190,8 @@ const Login = () => {
     setMode(mode === "login" ? "signup" : "login");
     setErrors({});
     setFormData({
-      fullName: "",
       email: "",
       password: "",
-      confirmPassword: "",
     });
   };
 
@@ -287,35 +268,6 @@ const Login = () => {
             onSubmit={mode === "login" ? handleEmailLogin : handleEmailSignup}
             className="space-y-4 sm:space-y-5"
           >
-            {/* Full Name (Signup only) */}
-            {mode === "signup" && (
-              <div className="animate-slide-down">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                  <input
-                    type="text"
-                    value={formData.fullName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fullName: e.target.value })
-                    }
-                    className={`w-full bg-gray-800/50 border ${
-                      errors.fullName ? "border-red-500" : "border-gray-700"
-                    } rounded-xl pl-11 sm:pl-12 pr-4 py-3 sm:py-3.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base`}
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                {errors.fullName && (
-                  <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.fullName}
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Email */}
             <div
               className="animate-slide-down"
@@ -386,54 +338,6 @@ const Login = () => {
                 </p>
               )}
             </div>
-
-            {/* Confirm Password (Signup only) */}
-            {mode === "signup" && (
-              <div
-                className="animate-slide-down"
-                style={{ animationDelay: "0.15s" }}
-              >
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    className={`w-full bg-gray-800/50 border ${
-                      errors.confirmPassword
-                        ? "border-red-500"
-                        : "border-gray-700"
-                    } rounded-xl pl-11 sm:pl-12 pr-12 py-3 sm:py-3.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base`}
-                    placeholder="Confirm your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.confirmPassword}
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Forgot Password Link (Login only) */}
             {mode === "login" && (

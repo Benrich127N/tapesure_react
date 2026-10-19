@@ -266,7 +266,7 @@ const ClientDetails = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-white">Order History</h2>
               <button
-                onClick={() => navigate("/outfits/new")}
+              onClick={() => navigate(`/outfits/new?clientId=${id}`)}
                 className="text-sm text-indigo-400 hover:text-indigo-300 transition"
               >
                 + New Order
@@ -278,7 +278,7 @@ const ClientDetails = () => {
                 <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-700 mx-auto mb-3" />
                 <p className="text-sm sm:text-base text-gray-500 mb-3">No orders yet</p>
                 <button
-                  onClick={() => navigate("/outfits/new")}
+                    onClick={() => navigate(`/outfits/new?clientId=${id}`)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2"
                 >
                   <Package className="w-4 h-4" />

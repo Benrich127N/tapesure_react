@@ -42,7 +42,7 @@ const UpdatePrompt = () => {
             <div className="flex gap-2">
               {needRefresh && (
                 <button
-                  onClick={() => updateServiceWorker(true)}
+                  onClick={() => updateServiceWorker()}
                   className="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95"
                 >
                   Reload
