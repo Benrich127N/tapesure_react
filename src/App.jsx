@@ -105,14 +105,14 @@ function App() {
           <Route path="*" element={<Onboarding />} />
         </Routes>
       ) : (
-        <div className="flex h-screen bg-black text-gray-900">
+        <div className="app-shell flex h-dvh bg-gray-950 text-gray-100">
           <Sidebar
             mobileOpen={mobileMenuOpen}
             setMobileOpen={setMobileMenuOpen}
           />
-          <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex min-w-0 flex-col flex-1 overflow-hidden">
             <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
-            <main className="flex-1 p-6 overflow-auto bg-black">
+            <main className="workspace-main flex-1 min-w-0 overflow-auto bg-gray-950 p-4 sm:p-6 lg:p-8">
               <Routes>
                 <Route path="/" element={<Dashboard shopName={userProfile.shopName} />} />
                 <Route path="/outfits" element={<Outfits />} />

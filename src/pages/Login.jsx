@@ -19,7 +19,6 @@ import {
   AlertCircle,
   CheckCircle,
   Loader,
-  Sparkles,
 } from "lucide-react";
 
 const Login = () => {
@@ -196,16 +195,22 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-indigo-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
-      </div>
-
+    <div className="auth-page min-h-screen bg-gray-950 flex items-center justify-center p-4 sm:p-8 relative">
       {/* Main Card */}
-      <div className="w-full max-w-md relative z-10">
+      <div className="auth-layout w-full relative z-10">
+        <aside className="auth-intro" aria-label="About TapeSure">
+          <div className="flex items-center gap-3 text-xl font-semibold text-white"><img src="/icon-128x128.png" alt="" className="w-10 h-10" />TapeSure</div>
+          <div>
+            <p className="text-sm font-semibold text-indigo-400 mb-4">YOUR TAILORING WORKSPACE</p>
+            <h2 className="text-4xl xl:text-5xl font-semibold tracking-tight text-white leading-tight">More time for your craft.<br />Less time on admin.</h2>
+            <p className="text-gray-400 text-lg leading-relaxed mt-6 max-w-md">Keep your customers, measurements, orders, and invoices together in one organized workspace.</p>
+            <div className="mt-10 space-y-5 text-gray-300">
+              {['Customer details, always at hand', 'Orders and delivery dates, organized', 'Clear invoices and payment tracking'].map((text) => <div key={text} className="flex gap-3 items-center"><CheckCircle className="w-5 h-5 text-indigo-400 shrink-0" /><span>{text}</span></div>)}
+            </div>
+          </div>
+          <p className="text-sm text-gray-500">Built for the way you work.</p>
+        </aside>
+        <div className="auth-form-panel w-full min-w-0">
         {/* Logo Section */}
         <div className="text-center mb-6 sm:mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-4">
@@ -226,7 +231,7 @@ const Login = () => {
         </div>
 
         {/* Auth Card */}
-        <div className="bg-gray-900/80 backdrop-blur-xl border border-gray-800/50 rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-8">
           {/* Mode Toggle */}
           <div className="flex bg-gray-800/50 rounded-xl p-1 mb-6 sm:mb-8">
             <button
@@ -273,12 +278,15 @@ const Login = () => {
               className="animate-slide-down"
               style={{ animationDelay: mode === "signup" ? "0.05s" : "0s" }}
             >
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
+                  id="auth-email"
+                  autoComplete="email"
+                  aria-invalid={!!errors.email}
                   type="email"
                   value={formData.email}
                   onChange={(e) =>
@@ -303,12 +311,15 @@ const Login = () => {
               className="animate-slide-down"
               style={{ animationDelay: mode === "signup" ? "0.1s" : "0.05s" }}
             >
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="auth-password" className="block text-sm font-medium text-gray-300 mb-2">
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
+                  id="auth-password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  aria-invalid={!!errors.password}
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) =>
@@ -321,6 +332,8 @@ const Login = () => {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                 >
@@ -359,7 +372,7 @@ const Login = () => {
               className={`w-full py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 shadow-lg ${
                 loading
                   ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white active:scale-95 shadow-indigo-500/50"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
               }`}
             >
               {loading ? (
@@ -443,8 +456,10 @@ const Login = () => {
 
         {/* Footer */}
         <p className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-500">
-          © 2024 TapeSure. All rights reserved.
+          © {new Date().getFullYear()} TapeSure. All rights reserved.
         </p>
+      </div>
+
       </div>
 
       {/* Password Reset Modal */}
@@ -527,7 +542,7 @@ const Login = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;

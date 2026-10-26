@@ -1,10 +1,9 @@
 // src/components/Sidebar.jsx
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom"; // Added useNavigate here
 import { signOut } from "firebase/auth";
 import {auth} from "../../firebase";
 import {
-  LayoutDashboard,
   Calendar,
   MessageSquare,
   LogOut,
@@ -15,7 +14,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
+  X,
   Ruler
 } from "lucide-react";
 
@@ -33,6 +32,28 @@ const navItems = [
 
 const Sidebar = ({ mobileOpen, setMobileOpen }) => { // Change this line
   const [collapsed, setCollapsed] = useState(false);
+  const drawerRef = useRef(null);
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth < 1024) setCollapsed(false); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.activeElement;
+    drawerRef.current?.querySelector('button')?.focus();
+    const onKey = (event) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+      if (event.key === 'Tab' && window.innerWidth < 1024) {
+        const items = Array.from(drawerRef.current?.querySelectorAll('a, button') || []).filter((item) => item.getClientRects().length > 0);
+        const first = items?.[0]; const last = items?.[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
+  }, [mobileOpen, setMobileOpen]);
   
   const navigate = useNavigate();
 // 2. Feedback Configuration
@@ -58,9 +79,9 @@ const toggleSidebar = () => setCollapsed(!collapsed);
 const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
 
 
-  const primaryBg = "bg-black";
+  const primaryBg = "bg-gray-900";
   const activeLink =
-    "bg-gray-900 text-indigo-400 border-l-4 border-indigo-500";
+    "bg-indigo-500/15 text-indigo-300 ring-1 ring-inset ring-indigo-400/20";
   const defaultLink =
     "text-gray-400 hover:bg-gray-900 hover:text-white";
 
@@ -69,18 +90,21 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
     {/* Mobile overlay */}
     <div
       onClick={toggleMobileSidebar}
-      className={`fixed inset-0 bg-black/60 z-50 sm:hidden ${
+      className={`fixed inset-0 bg-black/60 z-50 lg:hidden ${
         mobileOpen ? "block" : "hidden"
       }`}
     />
 {/* Mobile sidebar */}
-    <div
+    <aside
+      ref={drawerRef}
+      id="workspace-navigation"
+      aria-label="Workspace navigation"
       className={`
-        fixed sm:static z-[60]
-      ${primaryBg} flex flex-col h-screen transition-all duration-300 shadow-2xl
-      ${collapsed ? "w-20" : "w-64"}
-      ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-      sm:translate-x-0
+        workspace-sidebar fixed lg:relative shrink-0 z-[60]
+      ${primaryBg} flex flex-col h-dvh border-r border-gray-800 transition-all duration-200
+      ${collapsed ? "lg:w-20" : "lg:w-64"} w-64
+      ${mobileOpen ? "translate-x-0 visible" : "-translate-x-full invisible lg:visible"}
+      lg:translate-x-0
 
       `}
     >
@@ -89,11 +113,12 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
   {/* Mobile menu button */}
  <button
   onClick={toggleMobileSidebar}
-   className="sm:hidden text-gray-400 hover:text-white"
+   aria-label="Close navigation"
+   className="lg:hidden p-2 text-gray-400 hover:text-white"
 
 >
 
-    <LayoutDashboard className="w-6 h-6" />
+    <X className="w-5 h-5" />
   </button>
 
         {!collapsed && (
@@ -102,8 +127,10 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
           </span>
         )}
         <button
+  aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+  aria-expanded={!collapsed}
   onClick={toggleSidebar}
-  className="hidden sm:block p-2 text-gray-400 hover:text-white rounded-lg transition-colors duration-200"
+  className="hidden lg:block p-2 text-gray-400 hover:text-white rounded-lg transition-colors duration-200"
 >
 
           {collapsed ? (
@@ -129,6 +156,7 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
             `
             }
             end
+            aria-label={item.name}
             title={collapsed ? item.name : ""}
           >
             <item.icon className="h-5 w-5" />
@@ -144,6 +172,7 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
               target="_blank"
               rel="noopener noreferrer"
               className={`flex items-center p-3 rounded-lg text-sm font-medium transition-colors text-green-500 hover:bg-green-500/10`}
+              aria-label="Give feedback"
               title={collapsed ? "Give Feedback" : ""}
             >
               <MessageSquare className="h-5 w-5" />
@@ -159,6 +188,7 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
       flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200
       ${defaultLink}
     `}
+    aria-label="Logout"
     title={collapsed ? "Logout" : ""}
   >
     <LogOut className="h-5 w-5 text-red-500" />
@@ -169,12 +199,12 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
 
       {/* User Profile Footer */}
       <div
-        className={`p-4 border-t border-gray-800 ${defaultLink} flex items-center cursor-pointer`}
+        className={`p-4 border-t border-gray-800 ${defaultLink} flex items-center `}
         title={collapsed ? "Profile" : ""}
       >
         <div className="flex-shrink-0">
           <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white">
-            JD
+            {(auth.currentUser?.displayName || auth.currentUser?.email || "T").charAt(0).toUpperCase()}
           </div>
         </div>
         {!collapsed && (
@@ -187,11 +217,11 @@ const toggleMobileSidebar = () => setMobileOpen(!mobileOpen);
   {auth.currentUser?.email || "Account"}
 </p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400 ml-2" />
+
           </>
         )}
       </div>
-    </div>
+    </aside>
     </>
 
   );

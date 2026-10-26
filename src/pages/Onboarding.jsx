@@ -38,8 +38,8 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-8">
+    <div className="min-h-dvh flex items-center justify-center bg-black p-4">
+      <div className="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl p-5 sm:p-8">
         
         {/* Header Section */}
         <div className="text-center mb-8">

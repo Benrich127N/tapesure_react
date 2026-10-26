@@ -20,3 +20,46 @@
 html, body, #root {
   height: 100%;
 }
+
+@layer base {
+  :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { margin: 0; min-width: 320px; background: #030712; color: #f3f4f6; -webkit-font-smoothing: antialiased; }
+  *, *::before, *::after { box-sizing: border-box; }
+  button, input, select, textarea { font: inherit; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid #a5b4fc; outline-offset: 3px; }
+  button:disabled { cursor: not-allowed; }
+  input, select, textarea { min-width: 0; }
+  h1, h2, h3 { text-wrap: balance; }
+}
+
+.auth-layout { max-width: 1120px; display: grid; align-items: center; gap: 48px; }
+.auth-intro { display: none; }
+.auth-form-panel { max-width: 460px; margin-inline: auto; }
+.auth-page { min-height: 100dvh; }
+.workspace-main > * { width: 100%; max-width: 1440px; margin-inline: auto; }
+.workspace-main .grid > * { min-width: 0; }
+.workspace-main table { text-align: left; }
+.workspace-main .shadow-lg, .auth-page .shadow-lg { box-shadow: none; }
+.workspace-main .shadow-2xl { box-shadow: 0 16px 48px #0004; }
+.workspace-sidebar nav a, .workspace-sidebar nav button { min-height: 44px; }
+.workspace-sidebar nav svg { flex-shrink: 0; }
+.workspace-sidebar nav button { width: 100%; }
+@media (min-width: 768px) {
+  .auth-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .auth-intro { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; padding: 24px 0; gap: 48px; }
+  .auth-intro h2 { font-size: clamp(2rem, 3.4vw, 3rem); }
+  .auth-form-panel > div:first-child { text-align: left; }
+  .auth-form-panel > div:first-child > div { display: none; }
+}
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px !important; }
+  .workspace-main h1 { font-size: 1.5rem; line-height: 1.3; }
+  .workspace-main .fc-toolbar { flex-wrap: wrap; gap: 12px; }
+  .workspace-main .fc-toolbar-title { font-size: 1.125rem; }
+  .workspace-main .fc-header-toolbar { align-items: flex-start; }
+  .workspace-main .fc-button { padding: 6px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
