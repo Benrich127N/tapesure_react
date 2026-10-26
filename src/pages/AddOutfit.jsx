@@ -5,12 +5,18 @@ import {
   addDoc,
   collection,
   doc,
+  getCountFromServer,
   getDocs,
   query,
   serverTimestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
+import {
+  celebrateMilestone,
+  CUSTOMER_MILESTONES,
+  ORDER_MILESTONES,
+} from "../utils/milestones";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
@@ -230,6 +236,57 @@ const AddOutfit = () => {
         measurements,
         createdAt: serverTimestamp(),
       });
+
+      try {
+        const [customerCountSnapshot, orderCountSnapshot] = await Promise.all([
+        getCountFromServer(
+          query(
+            collection(db, "clients"),
+            where("userId", "==", auth.currentUser.uid),
+          ),
+        ),
+        getCountFromServer(
+          query(
+            collection(db, "outfits"),
+            where("userId", "==", auth.currentUser.uid),
+          ),
+        ),
+      ]);
+        const customerCount = customerCountSnapshot.data().count;
+        const orderCount = orderCountSnapshot.data().count;
+        const createdNewCustomer = selectedClientId === "new";
+
+        if (createdNewCustomer && customerCount === 1 && orderCount === 1) {
+          celebrateMilestone({
+            id: "first-customer-order",
+            title: "Your first customer is in!",
+            message: `${formData.clientName.trim()} is now saved, and your first order is officially underway.`,
+            emoji: "✂️",
+          });
+        } else {
+          if (createdNewCustomer && CUSTOMER_MILESTONES.includes(customerCount)) {
+            celebrateMilestone({
+              id: `customers-${customerCount}`,
+              title: `${customerCount} customers!`,
+              message: "Your customer book is growing. Every relationship is a stitch in your shop's story.",
+              emoji: "🤝",
+            });
+          }
+
+          if (ORDER_MILESTONES.includes(orderCount)) {
+            celebrateMilestone({
+              id: `orders-${orderCount}`,
+              title: orderCount === 1 ? "Your first order is underway!" : `${orderCount} orders created!`,
+              message: orderCount === 1
+                ? "Your order book has officially started. Keep the momentum going."
+                : "A strong record of the work moving through your shop. Keep the momentum going.",
+              emoji: "🧵",
+            });
+          }
+        }
+      } catch (milestoneError) {
+        console.warn("Order saved, but milestone counting failed:", milestoneError);
+      }
 
       localStorage.setItem("tapesure-first-order-created", "true");
       window.dispatchEvent(new Event("tapesure:order-created"));

@@ -24,6 +24,7 @@ import CreateInvoice from "./pages/CreateInvoice";
 import InvoiceDetails from "./pages/InvoiceDetails";
 import Measurements from "./pages/Measurements.jsx";
 import InstallPrompt from "./components/InstallPrompt";
+import MilestoneCelebration from "./components/MilestoneCelebration";
 
 
 
@@ -130,6 +131,7 @@ function App() {
               </Routes>
             </main>
             <Footer />
+            <MilestoneCelebration />
             <InstallPrompt />
           </div>
         </div>

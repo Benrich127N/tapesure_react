@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../firebase";
+import { celebrateMilestone, CUSTOMER_MILESTONES } from "../utils/milestones";
 import { useNavigate } from 'react-router-dom'; // Add this line at the top
 import { 
   collection, 
@@ -113,6 +114,18 @@ const Clients = () => {
         },
         createdAt: serverTimestamp()
       });
+
+      const customerCount = clients.length + 1;
+      if (CUSTOMER_MILESTONES.includes(customerCount)) {
+        celebrateMilestone({
+          id: `customers-${customerCount}`,
+          title: customerCount === 1 ? "Your first customer is in!" : `${customerCount} customers!`,
+          message: customerCount === 1
+            ? `${formData.name.trim()} is now part of your customer book. Your shop is officially growing.`
+            : "Your customer book is growing. Every relationship is a stitch in your shop's story.",
+          emoji: customerCount === 1 ? "✂️" : "🤝",
+        });
+      }
 
       // Reset form
       setFormData({ name: "", phone: "", email: "" });

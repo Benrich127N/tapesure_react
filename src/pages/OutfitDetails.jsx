@@ -1,8 +1,21 @@
 // src/pages/OutfitDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { auth, db } from "../../firebase";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getCountFromServer,
+  getDoc,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import {
+  celebrateMilestone,
+  DELIVERY_MILESTONES,
+} from "../utils/milestones";
 import { 
   ArrowLeft, 
   Save, 
@@ -88,6 +101,7 @@ const OutfitDetails = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const becameDelivered = outfit?.status !== "Delivered" && formData.status === "Delivered";
 
     try {
       await updateDoc(doc(db, "outfits", id), {
@@ -111,6 +125,33 @@ const OutfitDetails = () => {
       // Refresh outfit data
       const outfitDoc = await getDoc(doc(db, "outfits", id));
       setOutfit(outfitDoc.data());
+
+      if (becameDelivered && auth.currentUser) {
+        try {
+          const deliveredSnapshot = await getCountFromServer(
+            query(
+              collection(db, "outfits"),
+              where("userId", "==", auth.currentUser.uid),
+              where("status", "==", "Delivered"),
+            ),
+          );
+          const deliveryCount = deliveredSnapshot.data().count;
+
+          if (DELIVERY_MILESTONES.includes(deliveryCount)) {
+            celebrateMilestone({
+              id: `deliveries-${deliveryCount}`,
+              title: deliveryCount === 1 ? "Your first delivery!" : `${deliveryCount} orders delivered!`,
+              message: deliveryCount === 1
+                ? "From customer details to finished outfit—your first tracked delivery is complete."
+                : "That is real work completed and real customers served. Well done.",
+              emoji: "🏆",
+            });
+          }
+        } catch (milestoneError) {
+          console.warn("Order updated, but delivery milestone counting failed:", milestoneError);
+        }
+      }
+
       alert("Outfit updated successfully!");
     } catch (error) {
       console.error("Error updating outfit:", error);
