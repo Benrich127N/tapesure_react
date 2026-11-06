@@ -118,7 +118,8 @@ function App() {
         <ProfileRecovery user={user} onRetry={() => setProfileAttempt(value => value + 1)} />
       ) : !userProfile?.onboardingCompleted || !userProfile?.shopName?.trim() ? (
         <Routes>
-          <Route path="*" element={<Onboarding key={user.uid} profile={userProfile} onComplete={profile => { setUserProfile(profile); setProfileError(false); }} />} />
+          <Route path="/onboarding" element={<Onboarding key={user.uid} profile={userProfile} onComplete={profile => { setUserProfile(profile); setProfileError(false); }} />} />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
         </Routes>
       ) : (
         <div className="app-shell flex h-dvh bg-gray-950 text-gray-100">
@@ -133,6 +134,8 @@ function App() {
             <Topbar accountName={userProfile.fullName ?? user.displayName} onMenuClick={() => setMobileMenuOpen(true)} mobileMenuOpen={mobileMenuOpen} />
             <main id="workspace-content" tabIndex={-1} aria-label="Workspace content" className="workspace-main flex-1 min-w-0 overflow-auto bg-gray-950 p-4 sm:p-6 lg:p-8">
               <Routes>
+                <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/signup" element={<Navigate to="/" replace />} />
                 <Route path="/" element={<Dashboard shopName={userProfile.shopName} />} />
                 <Route path="/outfits" element={<Outfits />} />
                 <Route path="/clients" element={<Clients />} />
