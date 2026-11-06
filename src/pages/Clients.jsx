@@ -1,444 +1,153 @@
-import React, { useState, useEffect } from "react";
-import { db, auth } from "../../firebase";
+import { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { addDoc, collection, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { Edit, Eye, Plus, Search, Trash2 } from "lucide-react";
+import { auth, db } from "../../firebase";
+import useShopCollection from "../hooks/useShopCollection";
+import AddCustomerDialog from "../components/AddCustomerDialog";
+import CustomerContact from "../components/CustomerContact";
+import { addedThisMonth, customerFormError, customerInitials, customerOrderSummary, joinedDate, searchCustomers } from "../utils/customers";
 import { celebrateMilestone, CUSTOMER_MILESTONES } from "../utils/milestones";
-import { useNavigate } from 'react-router-dom'; // Add this line at the top
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp,
-  orderBy 
-} from "firebase/firestore";
-import { 
-  Search, 
-  Plus, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  Package, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  User,
-  X
-} from "lucide-react";
+import "./Clients.css";
 
-const Clients = () => {
-  const navigate = useNavigate(); // <--- ADD THIS LINE HERE
-  const [clients, setClients] = useState([]);
-  const [outfits, setOutfits] = useState([]); // Add this
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: ""
-  });
+const actionClass = "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition";
+const panelClass = "min-w-0 rounded-xl border border-gray-800 bg-gray-900 p-4 sm:p-5";
 
-  // Fetch clients from Firebase
-  useEffect(() => {
-    if (!auth.currentUser) return;
+function CustomerActions({ customer, compact, deleting, onDelete }) {
+  const name = customer.name || "customer";
+  return <div className={`flex gap-2 ${compact ? "justify-end" : ""}`}>
+    <Link to={`/clients/${customer.id}`} aria-label={`View ${name}`} title={`View ${name}`} className={`${actionClass} ${compact ? "" : "flex-1"} bg-indigo-600 text-white hover:bg-indigo-500`}><Eye aria-hidden="true" size={16} /><span className={compact ? "sr-only" : ""}>View</span></Link>
+    <Link to={`/clients/${customer.id}?edit=true`} aria-label={`Edit ${name}`} title={`Edit ${name}`} className={`${actionClass} ${compact ? "" : "flex-1"} border border-gray-600 text-gray-200 hover:bg-gray-800`}><Edit aria-hidden="true" size={16} /><span className={compact ? "sr-only" : ""}>Edit</span></Link>
+    <button type="button" disabled={deleting} onClick={() => onDelete(customer)} aria-label={`${deleting ? "Deleting" : "Delete"} ${name}`} title={`${deleting ? "Deleting" : "Delete"} ${name}`} className={`${actionClass} shrink-0 border border-red-800 text-red-300 hover:bg-red-900/20 disabled:opacity-50`}><Trash2 aria-hidden="true" size={16} /><span className="sr-only">{deleting ? "Deleting…" : "Delete"}</span></button>
+  </div>;
+}
 
-    const q = query(
-      collection(db, "clients"),
-      where("userId", "==", auth.currentUser.uid),
-      orderBy("createdAt", "desc")
-    );
+export default function Clients() {
+  const customers = useShopCollection("clients");
+  const orders = useShopCollection("outfits");
+  const [search, setSearch] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [createPending, setCreatePending] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "", email: "" });
+  const creationPending = useRef(false);
+  const [deleting, setDeleting] = useState(null);
+  const [feedback, setFeedback] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const deletionPending = useRef(new Set());
+  const filtered = searchCustomers(customers.data, search);
+  const metrics = useMemo(() => new Map(customers.data.map((customer) => [customer.id, customerOrderSummary(customer, orders.data)])), [customers.data, orders.data]);
+  const countsReady = !orders.loading && !orders.error;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const clientsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setClients(clientsData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch outfits to count orders per client
-  useEffect(() => {
-    if (!auth.currentUser) return;
-
-    const q = query(
-      collection(db, "outfits"),
-      where("userId", "==", auth.currentUser.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const outfitsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setOutfits(outfitsData);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Filter clients based on search
-  const filteredClients = clients.filter(client => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(searchLower) ||
-      client.phone?.includes(searchTerm) ||
-      client.email?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Add new client
-  const handleAddClient = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      alert("Name and phone are required");
+  const addCustomer = async (event) => {
+    event.preventDefault();
+    if (creationPending.current) return;
+    const validation = customerFormError(form);
+    if (validation) { setCreateError(validation); return; }
+    creationPending.current = true;
+    setCreatePending(true);
+    setCreateError("");
+    const name = form.name.trim();
+    const count = customers.loading || customers.error ? null : customers.data.length + 1;
+    try {
+      await addDoc(collection(db, "clients"), { userId: auth.currentUser.uid, name, phone: form.phone.trim(), email: form.email.trim(), measurements: { chest: 0, waist: 0, hip: 0 }, createdAt: serverTimestamp() });
+    } catch {
+      creationPending.current = false;
+      setCreatePending(false);
+      setCreateError("We couldn’t add this customer. Your details are still in the form. Please try again.");
       return;
     }
+    creationPending.current = false;
+    setCreatePending(false);
+    setAdding(false);
+    setForm({ name: "", phone: "", email: "" });
+    setFeedback(`${name} added to your customers.`);
+    if (count != null && CUSTOMER_MILESTONES.includes(count)) celebrateMilestone({ id: `customers-${count}`, title: count === 1 ? "Your first customer is in!" : `${count} customers!`, message: count === 1 ? `${name} is now in your customer book.` : "Your customer book is growing.", emoji: count === 1 ? "✂️" : "🤝" });
+  };
 
+  const deleteCustomer = async (customer) => {
+    if (deletionPending.current.has(customer.id)) return;
+    if (!window.confirm(`Delete ${customer.name || "this customer"}? Their orders will be kept.`)) return;
+    deletionPending.current.add(customer.id);
+    setDeleting(customer.id);
+    setDeleteError("");
+    setFeedback("");
     try {
-      await addDoc(collection(db, "clients"), {
-        userId: auth.currentUser.uid,
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim() || "",
-        measurements: {
-          chest: 0,
-          waist: 0,
-          hip: 0
-        },
-        createdAt: serverTimestamp()
-      });
-
-      const customerCount = clients.length + 1;
-      if (CUSTOMER_MILESTONES.includes(customerCount)) {
-        celebrateMilestone({
-          id: `customers-${customerCount}`,
-          title: customerCount === 1 ? "Your first customer is in!" : `${customerCount} customers!`,
-          message: customerCount === 1
-            ? `${formData.name.trim()} is now part of your customer book. Your shop is officially growing.`
-            : "Your customer book is growing. Every relationship is a stitch in your shop's story.",
-          emoji: customerCount === 1 ? "✂️" : "🤝",
-        });
-      }
-
-      // Reset form
-      setFormData({ name: "", phone: "", email: "" });
-      setShowAddModal(false);
-    } catch (error) {
-      console.error("Error adding client:", error);
-      alert("Failed to add client");
+      await deleteDoc(doc(db, "clients", customer.id));
+      setFeedback(`${customer.name || "Customer"} deleted. Their orders have been kept.`);
+    } catch {
+      setDeleteError(`We couldn’t delete ${customer.name || "this customer"}. Please try again.`);
+    } finally {
+      deletionPending.current.delete(customer.id);
+      setDeleting((current) => current === customer.id ? null : current);
     }
   };
 
-  // Delete client
-  const handleDeleteClient = async (clientId) => {
-    if (!window.confirm("Are you sure you want to delete this client?")) {
-      return;
-    }
+  return <div className="space-y-4 sm:space-y-6">
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0"><h1 className="text-2xl font-bold text-white sm:text-3xl">Customers</h1><p className="mt-1 text-sm text-gray-300">Contact details, measurements, and order history in one place.</p></div>
+      <button id="add-customer-trigger" type="button" disabled={createPending} onClick={() => { setFeedback(""); setAdding(true); }} className={`${actionClass} bg-indigo-600 px-4 text-white hover:bg-indigo-500 disabled:opacity-60`}><Plus aria-hidden="true" size={18} /> Add customer</button>
+    </header>
 
-    try {
-      await deleteDoc(doc(db, "clients", clientId));
-    } catch (error) {
-      console.error("Error deleting client:", error);
-      alert("Failed to delete client");
-    }
-  };
+    <section aria-label="Customer summary" className="grid max-w-xl grid-cols-2 gap-3">
+      {[{ label: "Total customers", value: customers.data.length }, { label: "Added this month", value: addedThisMonth(customers.data) }].map((stat) => <div key={stat.label} className="min-w-0 rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">
+        <h2 className="text-sm text-gray-300">{stat.label}</h2><p className="mt-1 text-2xl font-bold text-indigo-300">{customers.loading ? <span className="text-sm text-gray-300">Loading…</span> : customers.error ? <span className="text-sm text-gray-300">Unavailable</span> : stat.value.toLocaleString()}</p>
+      </div>)}
+    </section>
 
-  // Get client's outfit count - NOW USING REAL DATA
-  const getClientOrders = (client) => {
-    return outfits.filter(outfit =>
-      outfit.clientId ? outfit.clientId === client.id : outfit.clientName === client.name
-    ).length;
-  };
-
-  const stats = [
-    { 
-      label: "Total Customers", 
-      value: clients.length, 
-      icon: User, 
-      color: "indigo" 
-    },
-    { 
-      label: "This Month", 
-      value: clients.filter(c => {
-        if (!c.createdAt) return false;
-        const clientDate = c.createdAt.toDate();
-        const now = new Date();
-        return clientDate.getMonth() === now.getMonth() && 
-               clientDate.getFullYear() === now.getFullYear();
-      }).length, 
-      icon: Package, 
-      color: "green" 
-    }
-  ];
-
-  return (
-    <div className="w-full space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
-            Customers
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400">
-            Manage customer details, measurements, and order history
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition active:scale-95 text-sm sm:text-base"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          Add New Customer
-        </button>
+    <section aria-label="Search customers" className={panelClass}>
+      <label htmlFor="customer-search" className="mb-2 block text-sm font-medium text-gray-200">Search customers</label>
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1"><Search aria-hidden="true" size={18} className="pointer-events-none absolute left-3 top-3.5 text-gray-400" /><input id="customer-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, phone, or email" className="min-h-11 w-full rounded-lg border border-gray-600 bg-gray-950 py-2 pl-10 pr-3 text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400" /></div>
+        {search && <button type="button" onClick={() => setSearch("")} className={`${actionClass} text-indigo-300 hover:bg-indigo-500/10`}>Clear search</button>}
       </div>
+      {!customers.loading && !customers.error && <p role="status" className="mt-3 text-sm text-gray-300">{filtered.length} of {customers.data.length} {customers.data.length === 1 ? "customer" : "customers"}</p>}
+    </section>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 border border-gray-800">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${stat.color}-400`} />
-              <span className={`text-xl sm:text-2xl font-bold text-${stat.color}-400`}>
-                {stat.value}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-400">{stat.label}</p>
-          </div>
-        ))}
-      </div>
+    {createPending && <p role="status" className="rounded-lg border border-indigo-800 bg-indigo-900/10 p-3 text-sm text-indigo-200">Adding customer…</p>}
+    {createError && !adding && <p role="alert" className="rounded-lg border border-red-800 bg-red-900/10 p-3 text-sm text-red-200">{createError} Open Add customer to retry.</p>}
+    {feedback && !createPending && <p role="status" className="rounded-lg border border-green-800 bg-green-900/10 p-3 text-sm text-green-200">{feedback}</p>}
+    {deleteError && <p role="alert" className="rounded-lg border border-red-800 bg-red-900/10 p-3 text-sm text-red-200">{deleteError}</p>}
+    {!customers.loading && !customers.error && orders.error && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-yellow-800 bg-yellow-900/10 p-3">
+      <p className="text-sm text-yellow-200">Customer details are available. We couldn’t load their order counts.</p><button type="button" onClick={orders.retry} className={`${actionClass} text-indigo-300 hover:bg-indigo-500/10`}>Retry order counts</button>
+    </div>}
 
-      {/* Search */}
-      <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
-          <input
-            type="text"
-            placeholder="Search by name, phone, or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="text-center py-10 text-gray-500">
-          <div className="animate-pulse">Loading clients...</div>
-        </div>
-      )}
-
-      {/* Clients Grid - Mobile Cards & Desktop Grid */}
-      {!loading && filteredClients.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {filteredClients.map((client) => {
-            const orderCount = getClientOrders(client);
-            
-            return (
-              <div 
-                key={client.id} 
-                className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-4 sm:p-6 hover:border-indigo-700 transition"
-              >
-                {/* Client Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-900/30 border border-indigo-700 flex items-center justify-center text-indigo-400 font-bold text-sm sm:text-lg flex-shrink-0">
-                      {client.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-white truncate">
-                        {client.name}
-                      </h3>
-                      <p className="text-[10px] sm:text-xs text-gray-500">
-                        Joined {client.createdAt?.toDate().toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Info */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400">
-                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="truncate">{client.phone}</span>
-                  </div>
-                  {client.email && (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400">
-                      <Mail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                      <span className="truncate">{client.email}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats Row */}
-                <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-800 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-[10px] sm:text-xs text-gray-500 mb-1">Total Orders</p>
-                    <p className="text-base sm:text-lg font-bold text-indigo-400">
-                      {orderCount}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] sm:text-xs text-gray-500 mb-1">Status</p>
-                    <p className="text-base sm:text-lg font-bold text-green-400">
-                      {orderCount > 0 ? 'Active' : 'New'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button 
-                      onClick={() => navigate(`/clients/${client.id}`)}
-
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95"
-                  >
-                    <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">View Details</span>
-                    <span className="sm:hidden">View</span>
-                  </button>
-                  <button 
-                      onClick={() => navigate(`/clients/${client.id}`)}
-
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95"
-                  >
-                    <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteClient(client.id)}
-                    className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95"
-                  >
-                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && filteredClients.length === 0 && (
-        <div className="bg-gray-900 rounded-lg sm:rounded-xl shadow-lg border border-gray-800 p-8 sm:p-12 text-center">
-          <User className="w-12 h-12 sm:w-16 sm:h-16 text-gray-700 mx-auto mb-4" />
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-400 mb-2">
-            {searchTerm ? "No customers found" : "No customers yet"}
-          </h3>
-          <p className="text-sm sm:text-base text-gray-500 mb-4">
-            {searchTerm 
-              ? "Try adjusting your search criteria" 
-              : "Customers will appear here when you create orders"
-            }
-          </p>
-          {!searchTerm && (
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add First Customer
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Add Client Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 w-full max-w-md">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-800">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Add New Customer</h2>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleAddClient} className="p-4 sm:p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Customer Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., John Doe"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Phone Number <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="e.g., +234 801 234 5678"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email <span className="text-gray-500 text-xs">(Optional)</span>
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="e.g., john@example.com"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
-                />
-              </div>
-
-              <div className="bg-indigo-900/20 border border-indigo-800 rounded-lg p-3 sm:p-4">
-                <p className="text-xs sm:text-sm text-indigo-300">
-                  💡 <strong>Tip:</strong> Measurements can be added when you create an order for this customer.
-                </p>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition"
-                >
-                  Add Customer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Clients;
+    {customers.loading ? <p role="status" className={`${panelClass} py-8 text-center text-sm text-gray-300`}>Loading your customers…</p>
+      : customers.error ? <div role="alert" className={`${panelClass} text-center`}><h2 className="text-lg font-bold text-white">We couldn’t load your customers.</h2><p className="mt-2 text-sm text-gray-300">Check your connection and try again.</p><button type="button" onClick={customers.retry} className={`${actionClass} mt-4 bg-indigo-600 text-white hover:bg-indigo-500`}>Try again</button></div>
+        : filtered.length === 0 ? <section className={`${panelClass} py-8 text-center`}><h2 className="text-lg font-bold text-white">{search.trim() ? "No matching customers" : "No customers yet"}</h2><p className="mt-2 text-sm text-gray-300">{search.trim() ? "Try another name, phone number, or email." : "Add your first customer to save their contact details and start tracking orders."}</p>{search ? <button type="button" onClick={() => setSearch("")} className={`${actionClass} mt-4 text-indigo-300 hover:bg-indigo-500/10`}>Clear search</button> : <button type="button" disabled={createPending} onClick={() => setAdding(true)} className={`${actionClass} mt-4 bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60`}><Plus aria-hidden="true" size={18} /> Add first customer</button>}</section>
+          : <>
+            <ul className="customer-card-grid grid gap-4">
+              {filtered.map((customer) => {
+                const summary = metrics.get(customer.id);
+                return <li key={customer.id} className={panelClass}>
+                  <article className="space-y-3">
+                    <div className="flex items-start gap-3"><span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-sm font-semibold text-indigo-300">{customerInitials(customer.name)}</span><div className="min-w-0 flex-1"><h2 className="break-words text-base font-semibold text-white">{customer.name || "Customer"}</h2><p className="mt-1 text-xs text-gray-400">Joined {joinedDate(customer.createdAt)}</p></div></div>
+                    <CustomerContact customer={customer} />
+                    <p className="rounded-lg bg-gray-800/60 p-3 text-sm text-gray-300">{countsReady ? <><span className="font-semibold text-gray-100">{summary.total}</span> {summary.total === 1 ? "order" : "orders"} · <span className={summary.active ? "font-semibold text-yellow-200" : "text-gray-300"}>{summary.active ? `${summary.active} active` : "No active orders"}</span></> : orders.loading ? "Loading orders…" : "Order counts unavailable"}</p>
+                    <CustomerActions customer={customer} deleting={deleting === customer.id} onDelete={deleteCustomer} />
+                  </article>
+                </li>;
+              })}
+            </ul>
+            <section aria-label="Customer directory" className={`${panelClass} customer-table-view hidden`}>
+              <table className="w-full table-fixed text-left text-sm">
+                <caption className="sr-only">Customers, newest first</caption>
+                <colgroup><col /><col /><col className="w-[72px]" /><col className="w-[72px]" /><col className="w-28" /><col className="w-44" /></colgroup>
+                <thead><tr>{["Customer", "Contact", "Orders", "Active", "Joined", "Actions"].map((label) => <th key={label} scope="col" className="border-b border-gray-700 px-2 py-3 text-xs font-semibold text-gray-300">{label}</th>)}</tr></thead>
+                <tbody>{filtered.map((customer) => {
+                  const summary = metrics.get(customer.id);
+                  return <tr key={customer.id} className="border-b border-gray-800">
+                    <th scope="row" className="break-words px-2 py-3 text-left font-semibold"><Link to={`/clients/${customer.id}`} className="inline-flex min-h-11 max-w-full items-center rounded text-indigo-300 hover:underline">{customer.name || "Customer"}</Link></th>
+                    <td className="px-2 py-3"><CustomerContact customer={customer} /></td>
+                    <td className="px-2 py-3 text-gray-100">{countsReady ? summary.total : <span className="text-xs text-gray-300">{orders.loading ? "Loading…" : "Unavailable"}</span>}</td>
+                    <td className="px-2 py-3 text-gray-100">{countsReady ? summary.active : <span className="text-xs text-gray-300">{orders.loading ? "Loading…" : "Unavailable"}</span>}</td>
+                    <td className="px-2 py-3 text-gray-300">{joinedDate(customer.createdAt)}</td>
+                    <td className="px-2 py-3"><CustomerActions customer={customer} compact deleting={deleting === customer.id} onDelete={deleteCustomer} /></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </section>
+          </>}
+    {adding && <AddCustomerDialog onClose={() => setAdding(false)} onSubmit={addCustomer} form={form} onChange={setForm} saving={createPending} error={createError} />}
+  </div>;
+}

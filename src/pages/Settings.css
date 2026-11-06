@@ -1,0 +1,13 @@
+.settings-page { min-width:0; }
+.settings-layout { display:grid; align-items:start; gap:1.25rem; }
+.settings-label { display:block; margin-bottom:.5rem; font-size:.875rem; font-weight:500; color:#f3f4f6; }
+.settings-input { display:block; min-height:44px; width:100%; border:1px solid #4b5563; border-radius:.5rem; padding:.625rem .75rem; background:#1f2937; color:#f9fafb; font-size:1rem; }
+.settings-input::placeholder { color:#9ca3af; }
+.settings-input:disabled { opacity:.6; }
+.settings-button { display:flex; min-height:44px; min-width:44px; align-items:center; justify-content:center; gap:.5rem; border-radius:.5rem; padding:.625rem 1rem; font-size:.875rem; font-weight:600; }
+.settings-page :is(button,input):focus-visible { outline:2px solid #a5b4fc; outline-offset:3px; }
+.settings-availability { border-width:1px; border-radius:999px; padding:.125rem .5rem; font-size:.75rem; font-weight:500; }
+.settings-page aside, .settings-page p { overflow-wrap:anywhere; }
+.settings-save-row > button { width:100%; }
+@container workspace (min-width:500px) { .settings-save-row > button { width:auto; } }
+@container workspace (min-width:900px) { .settings-layout { grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:1.5rem; } }

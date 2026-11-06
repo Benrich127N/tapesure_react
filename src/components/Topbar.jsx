@@ -1,103 +1,46 @@
-// src/components/Topbar.jsx
-import React from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
-import { Plus, Search, Menu } from "lucide-react"; // Added Menu icon
-import { useState } from "react";
+import { Plus, Search, Menu, X } from "lucide-react";
+import { accountInitial, orderSearchDestination } from "../utils/navigation";
 
-const Topbar = ({ onMenuClick }) => { // Add this prop
+export default function Topbar({ onMenuClick, mobileMenuOpen, accountName }) {
   const navigate = useNavigate();
-  const user = auth.currentUser;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") || "");
-
-  const handleSearch = (e) => {
-    const val = e.target.value;
-    setQuery(val);
-    
-    if (window.location.pathname !== "/outfits" && val.length > 0) {
-      navigate(`/outfits?q=${val}`);
-    } else {
-      setSearchParams(val ? { q: val } : {});
-    }
+  const { pathname, search } = useLocation();
+  const query = new URLSearchParams(search).get("q") || "";
+  const [draft, setDraft] = useState(query);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const inputRef = useRef(null);
+  const triggerRef = useRef(null);
+  const name = (accountName ?? auth.currentUser?.displayName) || "Tailor";
+  useEffect(() => { setDraft(query); setSearchOpen(false); }, [pathname, query]);
+  useEffect(() => { if (searchOpen) inputRef.current?.focus(); }, [searchOpen]);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 640px)");
+    const resize = () => {
+      if (media.matches && searchOpen) { setSearchOpen(false); inputRef.current?.focus(); }
+    };
+    media.addEventListener("change", resize);
+    return () => media.removeEventListener("change", resize);
+  }, [searchOpen]);
+  const dismissSearch = () => { setSearchOpen(false); setDraft(query); triggerRef.current?.focus(); };
+  const submit = event => {
+    event.preventDefault();
+    navigate(orderSearchDestination(pathname, search, draft));
+    setSearchOpen(false);
+    if (searchOpen) requestAnimationFrame(() => document.getElementById("workspace-content")?.focus());
   };
-
-  return (
-    <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 sm:px-6 lg:px-8 shrink-0 z-10">
-      <div className="flex items-center justify-between gap-3">
-        
-        {/* Mobile Menu Button + Search Bar */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 max-w-lg">
-          {/* Hamburger Menu - Only visible on mobile */}
-          <button
-            onClick={onMenuClick}
-            aria-controls="workspace-navigation"
-            className="lg:hidden text-gray-400 hover:text-white transition p-2"
-            aria-label="Toggle menu"
-          >
-            <Menu size={24} />
-          </button>
-
-          {/* Search Bar */}
-          <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
-              <Search size={18} />
-            </span>
-            <input
-              type="text"
-              aria-label="Search orders"
-              placeholder="Search orders..."
-              value={query}
-              onChange={handleSearch}
-              className="w-full bg-gray-900 text-white placeholder-gray-500 border border-gray-800 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Action Area */}
-        <div className="flex items-center justify-end shrink-0 gap-2 sm:gap-4">
-          
-          {/* Quick Add Button */}
-          <button
-            onClick={() => navigate("/outfits/new")}
-            aria-label="New order"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-indigo-500 transition active:scale-95  font-medium text-sm"
-          >
-            <Plus size={18} /> <span className="hidden sm:inline">New Order</span>
-          </button>
-
-          {/* Notifications */}
-          {/* <div className="relative cursor-pointer text-gray-400 hover:text-white transition">
-            <Bell size={22} />
-            <span className="absolute -top-1 -right-1 bg-red-500 w-2 h-2 rounded-full border-2 border-black"></span>
-          </div> */}
-
-          {/* User Info */}
-          <div className="flex items-center space-x-3 sm:border-l border-gray-800 sm:pl-4">
-            <div className="text-right hidden xl:block">
-              <p className="text-sm font-semibold text-white">
-                {user?.displayName || "Tailor"}
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold">
-                Pro Account
-              </p>
-            </div>
-
-            <button
-              type="button"
-              aria-label="Account settings"
-              onClick={() => navigate("/settings")}
-              className="w-9 h-9 rounded-full bg-indigo-600 p-0.5 cursor-pointer hover:opacity-80 transition"
-            >
-              <div className="bg-black w-full h-full rounded-full flex items-center justify-center text-xs font-bold text-white uppercase">
-                {user?.email?.charAt(0) || "U"}
-              </div>
-            </button>
-          </div>
-        </div>
+  return <header className="workspace-topbar shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 sm:px-6 lg:px-8">
+    <div className="workspace-topbar-row flex items-center gap-2 sm:gap-3">
+      <button type="button" onClick={onMenuClick} aria-controls="workspace-navigation" aria-expanded={mobileMenuOpen} aria-label="Open navigation" className="workspace-icon-button shrink-0 text-gray-200 hover:bg-gray-800 lg:hidden"><Menu aria-hidden="true" size={24}/></button>
+      <button ref={triggerRef} type="button" aria-label="Open order search" aria-expanded={searchOpen} aria-controls="workspace-order-search" onClick={() => setSearchOpen(value => !value)} className="workspace-mobile-search-trigger flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-600 px-3 text-sm text-gray-200"><Search aria-hidden="true" size={18}/><span>Search</span></button>
+      <form id="workspace-order-search" role="search" aria-label="Search orders" onSubmit={submit} className={`workspace-order-search min-w-0 flex-1 ${searchOpen ? "is-open" : ""}`} onKeyDown={event => { if (event.key === "Escape" && searchOpen) { event.preventDefault(); dismissSearch(); } }}>
+        <div className="flex min-w-0 items-center gap-2"><label htmlFor="workspace-order-query" className="sr-only">Search orders</label><input ref={inputRef} id="workspace-order-query" type="search" autoComplete="off" placeholder="Search orders…" value={draft} onChange={event => setDraft(event.target.value)} className="min-h-11 min-w-0 w-full rounded-lg border border-gray-600 bg-gray-900 px-3 text-base text-white placeholder-gray-400"/><button type="submit" aria-label="Submit order search" title="Search orders" className="workspace-icon-button shrink-0 bg-indigo-600 text-white hover:bg-indigo-500"><Search aria-hidden="true" size={20}/></button><button type="button" aria-label="Close order search" onClick={dismissSearch} className="workspace-search-close workspace-icon-button shrink-0 text-gray-200 hover:bg-gray-800"><X aria-hidden="true" size={20}/></button></div>
+      </form>
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
+        <button type="button" onClick={() => navigate("/outfits/new")} aria-label="New order" title="New order" className="workspace-icon-button gap-2 bg-indigo-600 px-3 text-sm font-semibold text-white hover:bg-indigo-500 sm:px-4"><Plus aria-hidden="true" size={18}/><span className="hidden sm:inline">New order</span></button>
+        <div className="flex items-center gap-3 sm:border-l sm:border-gray-700 sm:pl-4"><p title={name} className="hidden max-w-48 truncate text-sm font-semibold text-white xl:block">{name}</p><button type="button" aria-label="Account settings" title="Account settings" onClick={() => navigate("/settings")} className="workspace-icon-button rounded-full border-2 border-indigo-500 bg-gray-950 text-sm font-bold text-white">{accountInitial(accountName,auth.currentUser)}</button></div>
       </div>
-    </header>
-  );
-};
-
-export default Topbar;
+    </div>
+  </header>;
+}

@@ -1,0 +1,6 @@
+.onboarding-page { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:1rem; padding-top:max(1rem,env(safe-area-inset-top)); padding-bottom:max(1rem,env(safe-area-inset-bottom)); background:#030712; }
+.onboarding-card { min-width:0; overflow-wrap:anywhere; }
+.onboarding-button { display:flex; align-items:center; justify-content:center; gap:.5rem; min-height:44px; min-width:44px; padding:.625rem .75rem; border-radius:.5rem; }
+.onboarding-page :is(input,button):focus-visible { outline:2px solid #a5b4fc; outline-offset:3px; }
+.onboarding-page form { margin-bottom:0; }
+@media (max-height:650px) { .onboarding-page { align-items:flex-start; } .onboarding-card header { margin-bottom:1rem; } }

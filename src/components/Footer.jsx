@@ -1,11 +1,3 @@
-const Footer = () => {
-  const currentYear = new Date().getFullYear();
-
-  return (
-    <footer className="shrink-0 bg-gray-950 py-3 px-4 sm:px-6 text-center text-gray-400 text-xs border-t border-gray-800">
-      © {currentYear} Tapsure. All rights reserved.
-    </footer>
-  );
-};
-
-export default Footer;
+export default function Footer() {
+  return <footer className="workspace-footer shrink-0 border-t border-gray-800 bg-gray-950 px-4 text-center text-xs text-gray-300">© {new Date().getFullYear()} TapeSure<span className="workspace-footer-detail">. All rights reserved.</span></footer>;
+}

@@ -1,14 +1,12 @@
 // src/pages/InvoiceDetails.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db, auth } from "../../firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, deleteDoc } from "firebase/firestore";
 import {
   ArrowLeft,
   Download,
   Printer,
-  Send,
-  Edit,
   Trash2,
   CheckCircle,
   Clock,
@@ -17,6 +15,9 @@ import {
   DollarSign,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import RecordPaymentDialog from "../components/RecordPaymentDialog";
+import { invoiceAmounts, invoiceMoney, invoicePaymentStatus, isInvoiceOverdue, paymentUpdate } from "../utils/invoices";
+import "./Invoices.css";
 
 const InvoiceDetails = () => {
   const { id } = useParams();
@@ -28,30 +29,49 @@ const InvoiceDetails = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
 
+  const [paymentError, setPaymentError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const paymentPending = useRef(false);
+  const activeInvoiceId = useRef(id);
+  const [today, setToday] = useState(() => new Date());
+  useEffect(() => { const timer = setInterval(() => setToday(new Date()), 60000); return () => clearInterval(timer); }, []);
+
   useEffect(() => {
+    let active = true;
+    activeInvoiceId.current = id;
+    setShowPaymentModal(false);
+    setPaymentError("");
+    setNotice("");
+    setPaymentAmount("");
+    setLoading(true);
+    setLoadError("");
+    setInvoice(null);
     const fetchInvoice = async () => {
-      if (!auth.currentUser) return;
+      if (!auth.currentUser) { setLoadError("Please sign in to view this invoice."); setLoading(false); return; }
 
       try {
         const docRef = doc(db, "invoices", id);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
+        if (!active) return;
+        if (docSnap.exists() && docSnap.data().userId === auth.currentUser.uid) {
           setInvoice({ id: docSnap.id, ...docSnap.data() });
         } else {
-          alert("Invoice not found");
-          navigate("/invoices");
+          setLoadError("Invoice not found or unavailable.");
         }
       } catch (error) {
         console.error("Error fetching invoice:", error);
-        alert("Failed to load invoice");
+        if (active) setLoadError("Could not load this invoice. Check your connection and try again.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchInvoice();
-  }, [id, navigate]);
+    return () => { active = false; };
+  }, [id, attempt]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -309,55 +329,36 @@ const InvoiceDetails = () => {
     }
   };
 
-  const handleRecordPayment = async () => {
-    if (!paymentAmount || Number(paymentAmount) <= 0) {
-      alert("Please enter a valid payment amount");
-      return;
-    }
-
-    if (Number(paymentAmount) > Number(invoice.balance)) {
-      alert("Payment amount cannot exceed balance due");
-      return;
-    }
-
+  const handleRecordPayment = async (event) => {
+    event.preventDefault();
+    if (paymentPending.current) return;
+    setPaymentError("");
+    try { paymentUpdate(invoice, paymentAmount); }
+    catch (error) { setPaymentError(error.message); return; }
+    paymentPending.current = true;
     setUpdating(true);
-
     try {
-      const newAmountPaid =
-        Number(invoice.amountPaid || 0) + Number(paymentAmount);
-      const newBalance = Number(invoice.totalAmount) - newAmountPaid;
-
-      let newStatus = invoice.status;
-      if (newBalance === 0) {
-        newStatus = "Paid";
-      } else if (newBalance > 0 && newAmountPaid > 0) {
-        newStatus = "Partial";
-      }
-
-      await updateDoc(doc(db, "invoices", id), {
-        amountPaid: newAmountPaid,
-        balance: newBalance,
-        status: newStatus,
-        paymentMethod: paymentMethod,
-        lastPaymentDate: new Date().toISOString().split("T")[0],
+      const updated = await runTransaction(db, async (transaction) => {
+        const reference = doc(db, "invoices", id);
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists() || snapshot.data().userId !== auth.currentUser?.uid) throw new Error("This invoice is no longer available.");
+        const latest = snapshot.data();
+        const changes = { ...paymentUpdate(latest, paymentAmount), paymentMethod,
+          lastPaymentDate: (() => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; })() };
+        transaction.update(reference, changes);
+        return { ...latest, id, ...changes };
       });
-
-      // Update local state
-      setInvoice({
-        ...invoice,
-        amountPaid: newAmountPaid,
-        balance: newBalance,
-        status: newStatus,
-        paymentMethod: paymentMethod,
-      });
-
+      if (activeInvoiceId.current !== id) return;
+      setInvoice(updated);
       setShowPaymentModal(false);
       setPaymentAmount("");
-      alert("Payment recorded successfully!");
+      setNotice("Payment recorded successfully.");
     } catch (error) {
       console.error("Error recording payment:", error);
-      alert("Failed to record payment");
+      if (activeInvoiceId.current !== id) return;
+      setPaymentError(error.code ? "Could not record payment. Check your connection and try again." : error.message);
     } finally {
+      paymentPending.current = false;
       setUpdating(false);
     }
   };
@@ -382,7 +383,7 @@ const InvoiceDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Loading invoice...</p>
@@ -393,25 +394,28 @@ const InvoiceDetails = () => {
 
   if (!invoice) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Invoice not found</p>
+      <div className="flex items-center justify-center min-h-64">
+        <div className="space-y-4 text-center"><p role="alert" className="text-gray-300">{loadError || "Invoice not found"}</p><button className="invoice-button mx-auto bg-indigo-600" onClick={() => setAttempt(value => value + 1)}>Retry</button><button className="invoice-button mx-auto bg-gray-800" onClick={() => navigate("/invoices")}>Back to invoices</button></div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-8">
+    <div className="invoice-details w-full max-w-4xl mx-auto space-y-6 pb-8">
+      {notice && <p role="status" className="rounded-lg border border-green-800 bg-green-900/20 p-4 text-green-200">{notice}</p>}
+      {paymentError && !showPaymentModal && <p role="alert" className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-red-200">{paymentError}</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
+            aria-label="Back to invoices"
             onClick={() => navigate("/invoices")}
-            className="p-2 hover:bg-gray-800 rounded-lg transition"
+            className="min-h-11 min-w-11 flex items-center justify-center p-2 hover:bg-gray-800 rounded-lg transition"
           >
             <ArrowLeft className="w-5 h-5 text-gray-400" />
           </button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">
+            <h1 id="invoice-details-title" tabIndex={-1} className="text-2xl sm:text-3xl font-bold text-white">
               Invoice Details
             </h1>
             <p className="text-sm text-gray-400">{invoice.invoiceNumber}</p>
@@ -422,7 +426,7 @@ const InvoiceDetails = () => {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={generatePDF}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white min-h-11 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
           >
             <Download className="w-4 h-4" />
             Download PDF
@@ -430,7 +434,7 @@ const InvoiceDetails = () => {
 
           <button
             onClick={handlePrint}
-            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
+            className="bg-gray-800 hover:bg-gray-700 text-white min-h-11 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
           >
             <Printer className="w-4 h-4" />
             Print
@@ -438,14 +442,14 @@ const InvoiceDetails = () => {
 
           <button
             onClick={handleShare}
-            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
+            className="bg-gray-800 hover:bg-gray-700 text-white min-h-11 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
           >
             <Share2 className="w-4 h-4" />
             Share
           </button>
           <button
             onClick={handleDelete}
-            className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
+            className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 min-h-11 px-4 py-2 rounded-lg flex items-center gap-2 transition text-sm"
           >
             <Trash2 className="w-4 h-4" />
             Delete
@@ -455,7 +459,7 @@ const InvoiceDetails = () => {
 
       {/* Invoice Content */}
       <div
-        className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-6 sm:p-8"
+        className="bg-gray-900 rounded-xl shadow-lg border border-gray-800 p-4 sm:p-8"
         id="invoice-content"
       >
         {/* Header Section */}
@@ -468,14 +472,15 @@ const InvoiceDetails = () => {
           </div>
           <div className="mt-4 sm:mt-0">
             <span
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold ${getStatusColor(invoice.status)}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border font-semibold ${getStatusColor(invoicePaymentStatus(invoice))}`}
             >
-              {getStatusIcon(invoice.status)}
-              {invoice.status}
+              {getStatusIcon(invoicePaymentStatus(invoice))}
+              {invoicePaymentStatus(invoice)}
             </span>
           </div>
         </div>
 
+        {isInvoiceOverdue(invoice, today) && <p className="mb-6 rounded-lg border border-red-800 bg-red-900/20 p-3 text-red-200">Overdue · Payment was due {invoice.dueDate}.</p>}
         {/* Invoice Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <div>
@@ -553,8 +558,8 @@ const InvoiceDetails = () => {
                       </p>
                     )}
                   </td>
-                  <td className="p-4 text-right text-white font-semibold">
-                    ₦{Number(invoice.totalAmount || 0).toLocaleString()}
+                  <td className="p-3 text-right text-white font-semibold invoice-amount">
+                    {invoiceMoney(invoiceAmounts(invoice).total)}
                   </td>
                 </tr>
               </tbody>
@@ -563,27 +568,27 @@ const InvoiceDetails = () => {
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-gray-800/50 rounded-lg p-6">
+        <div className="bg-gray-800/50 rounded-lg p-4 sm:p-6">
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="payment-summary-row">
               <span className="text-gray-400">Total Amount</span>
               <span className="text-xl font-bold text-white">
-                ₦{Number(invoice.totalAmount || 0).toLocaleString()}
+                {invoiceMoney(invoiceAmounts(invoice).total)}
               </span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="payment-summary-row">
               <span className="text-gray-400">Amount Paid</span>
               <span className="text-lg font-semibold text-green-400">
-                ₦{Number(invoice.amountPaid || 0).toLocaleString()}
+                {invoiceMoney(invoiceAmounts(invoice).paid)}
               </span>
             </div>
             <div className="border-t border-gray-700 pt-4">
-              <div className="flex justify-between items-center">
+              <div className="payment-summary-row">
                 <span className="text-lg font-semibold text-gray-300">
                   Balance Due
                 </span>
                 <span className="text-2xl font-bold text-yellow-400">
-                  ₦{Number(invoice.balance || 0).toLocaleString()}
+                  {invoiceMoney(invoiceAmounts(invoice).balance)}
                 </span>
               </div>
             </div>
@@ -611,86 +616,23 @@ const InvoiceDetails = () => {
         )}
 
         {/* Record Payment Button */}
-        {Number(invoice.balance) > 0 && (
+        {invoiceAmounts(invoice).balance > 0 && (
           <div className="mt-8">
             <button
-              onClick={() => setShowPaymentModal(true)}
+              onClick={() => { setNotice(""); setPaymentError(""); setShowPaymentModal(true); }}
+              disabled={updating}
               className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
             >
               <DollarSign className="w-5 h-5" />
-              Record Payment
+              {updating ? "Recording payment…" : "Record Payment"}
             </button>
           </div>
         )}
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-white mb-4">
-              Record Payment
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Payment Amount
-                </label>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  max={invoice.balance}
-                  min="0"
-                  step="0.01"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Enter amount"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Balance due: ₦{Number(invoice.balance || 0).toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Payment Method
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Card">Card</option>
-                  <option value="Mobile Money">Mobile Money</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    setPaymentAmount("");
-                  }}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg font-medium transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRecordPayment}
-                  disabled={updating}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition disabled:opacity-50"
-                >
-                  {updating ? "Processing..." : "Confirm"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {showPaymentModal && <RecordPaymentDialog amount={paymentAmount} method={paymentMethod} balance={invoiceAmounts(invoice).balance} saving={updating} error={paymentError} onAmount={setPaymentAmount} onMethod={setPaymentMethod} onSubmit={handleRecordPayment} onClose={() => setShowPaymentModal(false)} />}
 
-
-{/* --- PASTE THE STYLE BLOCK BELOW THIS LINE --- */}
+      {/* Print layout */}
       <style>{`
         @media print {
           /* Hide everything except invoice content */

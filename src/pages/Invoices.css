@@ -1,0 +1,24 @@
+.invoices-page { min-width: 0; }
+.invoices-page :is(button, input):focus-visible, .payment-dialog :is(button, input, select):focus-visible { outline: 2px solid #a5b4fc; outline-offset: 3px; }
+.invoice-button { display:flex; align-items:center; justify-content:center; gap: .5rem; min-height:44px; min-width:44px; padding:.5rem .75rem; border-radius:.5rem; font-weight:500; }
+.invoice-summaries { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+.invoice-summary-value { font-size:clamp(.95rem, 2.2vw, 1.5rem); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.invoice-amount { font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.invoice-status { display:inline-flex; align-items:center; border:1px solid #4b5563; border-radius:999px; padding:.2rem .5rem; font-size:.75rem; font-weight:600; color:#e5e7eb; background:#1f2937; }
+.invoice-status-paid { color:#86efac; border-color:#166534; background:#052e16; }
+.invoice-status-partial { color:#93c5fd; border-color:#1e40af; background:#172554; }
+.invoice-status-pending { color:#fde68a; border-color:#854d0e; background:#422006; }
+.invoice-status-overdue { color:#fca5a5; border-color:#991b1b; background:#450a0a; }
+.invoice-cards { display:grid; gap:1rem; }
+.invoice-table { display:none; }
+@container workspace (min-width:640px) { .invoice-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .invoice-summaries { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@container workspace (min-width:1080px) { .invoice-cards { display:none; } .invoice-table { display:block; } }
+.payment-dialog { width:min(28rem,calc(100vw - 2rem)); max-height:calc(100dvh - 2rem); margin:auto; overflow-y:auto; }
+.payment-dialog::backdrop { background:rgb(0 0 0 / .7); }
+.invoice-details { overflow-wrap:anywhere; }
+.invoice-details .payment-summary-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem 1rem; }
+.invoice-details .payment-summary-row > :last-child { margin-left:auto; text-align:right; font-variant-numeric:tabular-nums; }
+
+.invoice-summary-card { container-type:inline-size; }
+.invoice-summary-compact { display:none; }
+@container (max-width:180px) { .invoice-summary-full { display:none; } .invoice-summary-compact { display:inline; } }

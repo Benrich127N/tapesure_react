@@ -1,393 +1,142 @@
-// src/pages/ClientDetails.jsx
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from "firebase/firestore";
-import { 
-  ArrowLeft, 
-  Save, 
-  Trash2,
-  User, 
-  Phone,
-  Mail,
-  Edit,
-  Package,
-  Calendar,
-  DollarSign,
-  Eye
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
+import { ArrowLeft, ArrowRight, Edit, Plus, Trash2 } from "lucide-react";
+import { auth, db } from "../../firebase";
+import useShopCollection from "../hooks/useShopCollection";
+import CustomerFields from "../components/CustomerFields";
+import CustomerContact from "../components/CustomerContact";
+import { customerFormError, customerInitials, customerOrderSummary, joinedDate } from "../utils/customers";
+import { formatDueDate, formatMoney } from "../utils/dashboard";
 
-const ClientDetails = () => {
+const actionClass = "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition";
+const panelClass = "min-w-0 rounded-xl border border-gray-800 bg-gray-900 p-4 sm:p-6";
+const contactForm = (customer) => ({ name: customer?.name || "", phone: customer?.phone || "", email: customer?.email || "" });
+
+export default function ClientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [client, setClient] = useState(null);
-  const [clientOutfits, setClientOutfits] = useState([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: ""
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editing = searchParams.get("edit") === "true";
+  const [profile, setProfile] = useState({ data: null, loading: true, error: "" });
+  const [attempt, setAttempt] = useState(0);
+  const [form, setForm] = useState(contactForm(null));
+  const [busy, setBusy] = useState("");
+  const pending = useRef(false);
+  const [saveError, setSaveError] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const orders = useShopCollection("outfits");
+  const customer = profile.data;
+  const summary = customer ? customerOrderSummary(customer, orders.data) : null;
+  const countsReady = !orders.loading && !orders.error;
 
-  // Fetch client data
   useEffect(() => {
-    const fetchClient = async () => {
+    let active = true;
+    setProfile({ data: null, loading: true, error: "" });
+    const load = async () => {
       try {
-        const clientDoc = await getDoc(doc(db, "clients", id));
-        if (clientDoc.exists()) {
-          const data = clientDoc.data();
-          setClient(data);
-          setFormData({
-            name: data.name || "",
-            phone: data.phone || "",
-            email: data.email || ""
-          });
-        } else {
-          alert("Client not found");
-          navigate("/clients");
+        const snapshot = await getDoc(doc(db, "clients", id));
+        if (!active) return;
+        if (!snapshot.exists() || snapshot.data().userId !== auth.currentUser?.uid) {
+          setProfile({ data: null, loading: false, error: "This customer could not be found." });
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching client:", error);
-        alert("Failed to load client");
-      } finally {
-        setLoading(false);
+        const data = { ...snapshot.data(), id: snapshot.id || id };
+        setProfile({ data, loading: false, error: "" });
+        setForm(contactForm(data));
+      } catch {
+        if (active) setProfile({ data: null, loading: false, error: "We couldn’t load this customer. Check your connection and try again." });
       }
     };
+    load();
+    return () => { active = false; };
+  }, [id, attempt]);
 
-    fetchClient();
-  }, [id, navigate]);
+  const setEditing = (value) => setSearchParams((previous) => {
+    const next = new URLSearchParams(previous);
+    if (value) next.set("edit", "true");
+    else next.delete("edit");
+    return next;
+  }, { replace: true });
 
-  // Fetch client's outfits
-  useEffect(() => {
-    if (!client) return;
-
-    const q = query(
-      collection(db, "outfits"),
-      where("clientName", "==", client.name)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const outfitsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setClientOutfits(outfitsData);
-    });
-
-    return () => unsubscribe();
-  }, [client]);
-
-  // Update client
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
+  const save = async (event) => {
+    event.preventDefault();
+    if (pending.current) return;
+    const error = customerFormError(form);
+    if (error) { setSaveError(error); return; }
+    pending.current = true;
+    setBusy("save");
+    setSaveError("");
+    setFeedback("");
+    const update = { name: form.name.trim(), phone: form.phone.trim(), email: form.email.trim() };
     try {
-      await updateDoc(doc(db, "clients", id), {
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim()
-      });
-
-      setEditMode(false);
-      // Refresh client data
-      const clientDoc = await getDoc(doc(db, "clients", id));
-      setClient(clientDoc.data());
-      alert("Client updated successfully!");
-    } catch (error) {
-      console.error("Error updating client:", error);
-      alert("Failed to update client");
+      await updateDoc(doc(db, "clients", id), update);
+      setProfile((previous) => ({ ...previous, data: { ...previous.data, ...update } }));
+      setEditing(false);
+      setFeedback("Customer details saved.");
+    } catch {
+      setSaveError("We couldn’t save your changes. Your details are still here. Please try again.");
     } finally {
-      setSaving(false);
+      pending.current = false;
+      setBusy("");
     }
   };
 
-  // Delete client
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this client? This will not delete their outfits.")) {
-      return;
-    }
-
+  const remove = async () => {
+    if (pending.current) return;
+    if (!window.confirm(`Delete ${customer.name || "this customer"}? Their orders will be kept.`)) return;
+    pending.current = true;
+    setBusy("delete");
+    setSaveError("");
     try {
       await deleteDoc(doc(db, "clients", id));
       navigate("/clients");
-    } catch (error) {
-      console.error("Error deleting client:", error);
-      alert("Failed to delete client");
+    } catch {
+      setSaveError("We couldn’t delete this customer. Please try again.");
+    } finally {
+      pending.current = false;
+      setBusy("");
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Delivered": return "bg-green-900/30 text-green-400 border border-green-700";
-      case "Delayed": return "bg-red-900/30 text-red-400 border border-red-700";
-      case "Ready": return "bg-indigo-900/30 text-indigo-400 border border-indigo-700";
-      default: return "bg-yellow-900/30 text-yellow-400 border border-yellow-700";
-    }
-  };
+  if (profile.loading) return <p role="status" className={`${panelClass} py-8 text-center text-sm text-gray-300`}>Loading customer details…</p>;
+  if (profile.error || !customer) return <div role="alert" className={`${panelClass} text-center`}>
+    <h1 className="text-xl font-bold text-white">Customer unavailable</h1><p className="mt-3 text-sm text-gray-300">{profile.error || "This customer could not be found."}</p>
+    <div className="mt-4 flex flex-wrap justify-center gap-2"><button type="button" onClick={() => setAttempt((value) => value + 1)} className={`${actionClass} bg-indigo-600 text-white hover:bg-indigo-500`}>Try again</button><Link to="/clients" className={`${actionClass} text-indigo-300 hover:bg-indigo-500/10`}>Back to customers</Link></div>
+  </div>;
 
-  if (loading) {
-    return (
-      <div className="w-full max-w-4xl mx-auto py-10 text-center text-gray-500">
-        <div className="animate-pulse">Loading client details...</div>
-      </div>
-    );
-  }
+  return <div className="space-y-4 sm:space-y-6">
+    <header className="flex flex-wrap items-center justify-between gap-3">
+      <Link to="/clients" className={`${actionClass} text-gray-200 hover:bg-gray-800`}><ArrowLeft aria-hidden="true" size={18} /> Back to customers</Link>
+      <div className="flex flex-wrap gap-2">{editing ? <button type="button" disabled={!!busy} onClick={() => { setForm(contactForm(customer)); setSaveError(""); setEditing(false); }} className={`${actionClass} border border-gray-600 text-gray-200 hover:bg-gray-800 disabled:opacity-50`}>Cancel</button> : <>
+        <button type="button" disabled={!!busy} onClick={() => { setForm(contactForm(customer)); setSaveError(""); setFeedback(""); setEditing(true); }} className={`${actionClass} bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50`}><Edit aria-hidden="true" size={16} /> Edit customer</button>
+        <button type="button" disabled={!!busy} onClick={remove} className={`${actionClass} border border-red-800 text-red-300 hover:bg-red-900/20 disabled:opacity-50`}><Trash2 aria-hidden="true" size={16} />{busy === "delete" ? "Deleting…" : "Delete"}</button>
+      </>}</div>
+    </header>
+    {feedback && <p role="status" className="rounded-lg border border-green-800 bg-green-900/10 p-3 text-sm text-green-200">{feedback}</p>}
+    {saveError && <p role="alert" className="rounded-lg border border-red-800 bg-red-900/10 p-3 text-sm text-red-200">{saveError}</p>}
 
-  // Calculate stats
-  const totalOrders = clientOutfits.length;
-  const pendingOrders = clientOutfits.filter(o => !["Delivered"].includes(o.status)).length;
-  const completedOrders = clientOutfits.filter(o => o.status === "Delivered").length;
-  const totalSpent = clientOutfits.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
-
-  return (
-    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <button 
-          onClick={() => navigate("/clients")}
-          className="flex items-center text-gray-400 hover:text-white transition text-sm sm:text-base self-start"
-        >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          Back to Clients
-        </button>
-        <div className="flex gap-2">
-          {!editMode ? (
-            <>
-              <button
-                onClick={() => setEditMode(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => {
-                setEditMode(false);
-                setFormData({
-                  name: client.name || "",
-                  phone: client.phone || "",
-                  email: client.email || ""
-                });
-              }}
-              className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* View Mode */}
-      {!editMode ? (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Client Info Card */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6">
-            <div className="flex items-start gap-3 sm:gap-4 mb-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-900/30 border-2 border-indigo-700 flex items-center justify-center text-indigo-400 font-bold text-xl sm:text-2xl flex-shrink-0">
-                {client.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 truncate">
-                  {client.name}
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Joined {client.createdAt?.toDate().toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-gray-800">
-              <div className="flex items-center gap-3 text-sm sm:text-base">
-                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0" />
-                <span className="text-gray-300">{client.phone || "No phone number"}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm sm:text-base">
-                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0" />
-                <span className="text-gray-300">{client.email || "No email"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-4 h-4 text-indigo-400" />
-                <p className="text-xs text-gray-500">Total Orders</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-indigo-400">{totalOrders}</p>
-            </div>
-            
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-yellow-400" />
-                <p className="text-xs text-gray-500">Pending</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-yellow-400">{pendingOrders}</p>
-            </div>
-            
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-4 h-4 text-green-400" />
-                <p className="text-xs text-gray-500">Completed</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-green-400">{completedOrders}</p>
-            </div>
-            
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-indigo-400" />
-                <p className="text-xs text-gray-500">Total Spent</p>
-              </div>
-              <p className="text-base sm:text-lg font-bold text-indigo-400">
-                ₦{totalSpent.toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          {/* Orders List */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Order History</h2>
-              <button
-              onClick={() => navigate(`/outfits/new?clientId=${id}`)}
-                className="text-sm text-indigo-400 hover:text-indigo-300 transition"
-              >
-                + New Order
-              </button>
-            </div>
-
-            {clientOutfits.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-700 mx-auto mb-3" />
-                <p className="text-sm sm:text-base text-gray-500 mb-3">No orders yet</p>
-                <button
-                    onClick={() => navigate(`/outfits/new?clientId=${id}`)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2"
-                >
-                  <Package className="w-4 h-4" />
-                  Create First Order
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {clientOutfits.map((outfit) => (
-                  <div
-                    key={outfit.id}
-                    className="bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-indigo-700 transition cursor-pointer"
-                    onClick={() => navigate(`/outfits/${outfit.id}`)}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-base font-semibold text-white truncate">
-                          {outfit.outfitType}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-gray-400">
-                          Due: {outfit.dueDate}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase px-2 py-1 rounded-full ${getStatusColor(outfit.status)}`}>
-                          {outfit.status}
-                        </span>
-                        <p className="text-sm sm:text-base font-semibold text-indigo-400 whitespace-nowrap">
-                          ₦{Number(outfit.amount || 0).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Edit Mode */
-        <form onSubmit={handleUpdate} className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-          <div className="flex items-center gap-2 mb-4">
-            <User className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg sm:text-xl font-bold text-white">Edit Client Information</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium text-gray-400 flex items-center gap-2">
-                <User size={14} /> Client Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                required
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium text-gray-400 flex items-center gap-2">
-                <Phone size={14} /> Phone Number <span className="text-red-400">*</span>
-              </label>
-              <input
-                required
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium text-gray-400 flex items-center gap-2">
-                <Mail size={14} /> Email <span className="text-gray-500 text-xs">(Optional)</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-yellow-300">
-              ⚠️ <strong>Note:</strong> Changing the client name will not update existing outfit records.
-            </p>
-          </div>
-
-          <div className="pt-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition ${
-                saving
-                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
-              }`}
-            >
-              {saving ? "Saving..." : <><Save size={18} /> Save Changes</>}
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
-  );
-};
-
-export default ClientDetails;
+    {editing ? <form onSubmit={save} aria-busy={busy === "save"} className={`${panelClass} mx-auto max-w-2xl space-y-5`}>
+      <h1 className="text-xl font-bold text-white">Edit customer</h1>
+      <CustomerFields prefix="edit-customer" value={form} onChange={setForm} disabled={!!busy} />
+      <p className="text-sm text-gray-300">Name changes won’t update names shown on existing orders.</p>
+      <button type="submit" disabled={!!busy} className={`${actionClass} w-full bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60`}>{busy === "save" ? "Saving changes…" : "Save changes"}</button>
+    </form> : <>
+      <section aria-label="Customer details" className={panelClass}>
+        <div className="flex items-start gap-3"><span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-base font-bold text-indigo-300">{customerInitials(customer.name)}</span><div className="min-w-0 flex-1"><h1 className="break-words text-2xl font-bold text-white">{customer.name || "Customer"}</h1><p className="mt-1 text-xs text-gray-400">Joined {joinedDate(customer.createdAt)}</p></div></div>
+        <div className="mt-4 border-t border-gray-800 pt-3"><CustomerContact customer={customer} /></div>
+      </section>
+      <section aria-label="Customer order summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[{ label: "Total orders", value: summary.total }, { label: "Active orders", value: summary.active }, { label: "Delivered", value: summary.delivered }, { label: "Order value", value: formatMoney(summary.value) }].map((stat) => <div key={stat.label} className="min-w-0 rounded-xl border border-gray-800 bg-gray-900 p-4"><h2 className="text-sm text-gray-300">{stat.label}</h2><p className="mt-2 break-all text-lg font-bold text-indigo-300">{countsReady ? stat.value : <span className="text-sm text-gray-300">{orders.loading ? "Loading…" : "Unavailable"}</span>}</p></div>)}
+      </section>
+      <section aria-labelledby="customer-orders-heading" className={panelClass}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 id="customer-orders-heading" className="text-lg font-bold text-white">Order history</h2><Link to={`/outfits/new?clientId=${encodeURIComponent(id)}`} className={`${actionClass} text-indigo-300 hover:bg-indigo-500/10`}><Plus aria-hidden="true" size={18} /> New order</Link></div>
+        {orders.loading ? <p role="status" className="py-5 text-sm text-gray-300">Loading customer orders…</p> : orders.error ? <div role="alert" className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-red-200">We couldn’t load this customer’s orders.</p><button type="button" onClick={orders.retry} className={`${actionClass} text-indigo-300 hover:bg-indigo-500/10`}>Try again</button></div> : summary.orders.length === 0 ? <p className="py-5 text-sm text-gray-300">No orders yet. Create an order to start this customer’s history.</p> : <ul className="grid gap-3 lg:grid-cols-2">{summary.orders.map((order) => <li key={order.id}>
+          <Link to={`/outfits/${order.id}`} className="flex min-h-11 items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/50 p-4 hover:border-indigo-400">
+            <div className="min-w-0 flex-1 break-words"><h3 className="text-sm font-semibold text-gray-100">{order.outfitType || "Order"}</h3><p className="mt-1 text-sm text-gray-300">Due {formatDueDate(order.dueDate)}</p><p className="mt-2 text-xs text-gray-300">{order.status || "Received"}</p><p className="mt-1 break-all text-sm font-semibold text-indigo-300">{formatMoney(order.amount)}</p></div><ArrowRight aria-hidden="true" size={18} className="shrink-0 text-indigo-300" />
+          </Link>
+        </li>)}</ul>}
+      </section>
+    </>}
+  </div>;
+}

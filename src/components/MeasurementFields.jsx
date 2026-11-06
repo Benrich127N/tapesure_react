@@ -1,0 +1,16 @@
+import { measurementDraft, measurementEntries, measurementGroups } from "../utils/measurements";
+
+export function MeasurementValues({ measurements }) {
+  const groups = measurementEntries(measurements).filter(group => group.values.length);
+  return <div className="space-y-4">{groups.map(group => <section key={group.key} aria-label={`${group.label} measurements in inches`}><h3 className="mb-2 text-sm font-semibold text-indigo-200">{group.label} · inches</h3><dl className="measurement-values-grid">{group.values.map(item => <div key={item.key} className="min-w-0 rounded-lg bg-gray-800 p-3"><dt className="text-xs text-gray-300">{item.label}</dt><dd className="mt-1 break-words font-semibold tabular-nums text-white">{item.value}</dd></div>)}</dl></section>)}{!groups.length && <p className="text-sm text-gray-300">No measurements recorded.</p>}{measurementDraft(measurements).notes && <p className="whitespace-pre-wrap break-words text-sm text-gray-300">{measurementDraft(measurements).notes}</p>}</div>;
+}
+
+export function MeasurementFields({ value, onChange, disabled, legacy }) {
+  const update = (group, key, next) => onChange({ ...value, [group]: { ...value[group], [key]: next } });
+  return <fieldset disabled={disabled} className="min-w-0 space-y-5"><legend className="sr-only">Measurements in inches</legend>
+    <div><label htmlFor="measurement-gender" className="mb-2 block text-sm text-gray-200">Customer gender</label><select id="measurement-gender" value={value.clientGender} onChange={event => onChange({ ...value, clientGender: event.target.value })} className="measurement-input"><option value="">Not specified</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>{value.clientGender && !["male","female","other"].includes(value.clientGender) && <option value={value.clientGender}>{value.clientGender}</option>}</select></div>
+    {measurementGroups.map(group => <fieldset key={group.key} className="min-w-0"><legend className="mb-3 text-sm font-semibold text-indigo-200">{group.label} measurements (inches)</legend><div className="measurement-values-grid">{group.fields.map(([key,label]) => <div key={key} className="min-w-0"><label htmlFor={`measurement-${group.key}-${key}`} className="mb-2 block text-sm text-gray-200">{label}</label><input id={`measurement-${group.key}-${key}`} type="number" inputMode="decimal" min="0" step="any" value={value[group.key][key]} onChange={event => update(group.key,key,event.target.value)} className="measurement-input" /></div>)}</div></fieldset>)}
+    {legacy && <div><label htmlFor="measurement-legacy-length" className="mb-2 block text-sm text-gray-200">Length (legacy, inches)</label><input id="measurement-legacy-length" type="number" min="0" step="any" value={value.legacyLength} onChange={event => onChange({ ...value, legacyLength:event.target.value })} className="measurement-input"/><p className="mt-2 text-xs text-gray-300">This older length value is kept separately because its garment type was not recorded.</p></div>}
+    <div><label htmlFor="measurement-notes" className="mb-2 block text-sm text-gray-200">Measurement notes</label><textarea id="measurement-notes" rows={3} value={value.notes} onChange={event => onChange({ ...value, notes:event.target.value })} className="measurement-input"/></div>
+  </fieldset>;
+}

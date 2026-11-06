@@ -1,0 +1,11 @@
+.customer-dialog { width: min(28rem, calc(100% - 32px)); max-height: calc(100dvh - 32px); margin: auto; }
+.customer-dialog::backdrop { background: #000b; }
+.customer-dialog-form { max-height: calc(100dvh - 34px); }
+.customer-dialog-form > div { overscroll-behavior: contain; }
+@container workspace (min-width: 600px) {
+  .customer-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container workspace (min-width: 900px) {
+  .workspace-main .customer-card-grid { display: none; }
+  .workspace-main .customer-table-view { display: block; }
+}

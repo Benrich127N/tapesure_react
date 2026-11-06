@@ -7,8 +7,10 @@ import { auth, db } from "../firebase";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Footer from "./components/Footer";
+import { RouteFocus, SkipToContent } from "./components/WorkspaceNavigation";
 
 import Onboarding from "./pages/Onboarding";
+import ProfileRecovery from "./components/ProfileRecovery";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Clients from "./pages/Clients";
@@ -32,13 +34,20 @@ function App() {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
+  const [profileAttempt, setProfileAttempt] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Add this
 
   useEffect(() => {
     let unsubscribeProfile;
+    let active = true;
+    let profileRequest = 0;
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!active) return;
+      const request = ++profileRequest;
       setUser(currentUser);
+      setProfileError(false);
 
       if (unsubscribeProfile) unsubscribeProfile();
 
@@ -51,23 +60,28 @@ function App() {
       setLoading(true);
       unsubscribeProfile = onSnapshot(
         doc(db, "users", currentUser.uid),
+        { includeMetadataChanges: true },
         (snapshot) => {
+          if (!active || request !== profileRequest || snapshot.metadata?.hasPendingWrites) return;
+          setProfileError(false);
           setUserProfile(snapshot.exists() ? snapshot.data() : null);
           setLoading(false);
         },
         (error) => {
+          if (!active || request !== profileRequest) return;
           console.error("Unable to load shop profile:", error);
-          setUserProfile(null);
+          setProfileError(true);
           setLoading(false);
         },
       );
     });
 
     return () => {
+      active = false;
       unsubscribe();
       if (unsubscribeProfile) unsubscribeProfile();
     };
-  }, []);
+  }, [profileAttempt]);
 
   if (loading) {
     return (
@@ -100,19 +114,24 @@ function App() {
     <Router>
       {!user ? (
         <Login />
+      ) : profileError ? (
+        <ProfileRecovery user={user} onRetry={() => setProfileAttempt(value => value + 1)} />
       ) : !userProfile?.onboardingCompleted || !userProfile?.shopName?.trim() ? (
         <Routes>
-          <Route path="*" element={<Onboarding />} />
+          <Route path="*" element={<Onboarding key={user.uid} profile={userProfile} onComplete={profile => { setUserProfile(profile); setProfileError(false); }} />} />
         </Routes>
       ) : (
         <div className="app-shell flex h-dvh bg-gray-950 text-gray-100">
+          <RouteFocus focusOnMount />
+          <SkipToContent />
           <Sidebar
+            accountName={userProfile.fullName ?? user.displayName}
             mobileOpen={mobileMenuOpen}
             setMobileOpen={setMobileMenuOpen}
           />
           <div className="flex min-w-0 flex-col flex-1 overflow-hidden">
-            <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
-            <main className="workspace-main flex-1 min-w-0 overflow-auto bg-gray-950 p-4 sm:p-6 lg:p-8">
+            <Topbar accountName={userProfile.fullName ?? user.displayName} onMenuClick={() => setMobileMenuOpen(true)} mobileMenuOpen={mobileMenuOpen} />
+            <main id="workspace-content" tabIndex={-1} aria-label="Workspace content" className="workspace-main flex-1 min-w-0 overflow-auto bg-gray-950 p-4 sm:p-6 lg:p-8">
               <Routes>
                 <Route path="/" element={<Dashboard shopName={userProfile.shopName} />} />
                 <Route path="/outfits" element={<Outfits />} />

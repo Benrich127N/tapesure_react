@@ -1,6 +1,6 @@
 // src/pages/OutfitDetails.jsx
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import {
   collection,
@@ -34,12 +34,28 @@ import {
   Package
 } from "lucide-react";
 
+import { MeasurementFields, MeasurementValues } from "../components/MeasurementFields";
+import { hasMeasurements, measurementDraft, measurementPayload, measurementsChanged } from "../utils/measurements";
+import "./Measurements.css";
+
 const OutfitDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveNotice, setSaveNotice] = useState("");
+  const savingRef = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editMode = searchParams.get("edit") === "true";
+  const setEditMode = (editing) => setSearchParams((previous) => {
+    const next = new URLSearchParams(previous);
+    if (editing) next.set("edit", "true");
+    else next.delete("edit");
+    return next;
+  }, { replace: true });
   const [outfit, setOutfit] = useState(null);
   const [formData, setFormData] = useState({
     clientName: "",
@@ -48,21 +64,18 @@ const OutfitDetails = () => {
     amount: "",
     status: "Pending",
     notes: "",
-    measurements: {
-      chest: "",
-      waist: "",
-      hip: "",
-      sleeve: "",
-      length: "",
-      notes: ""
-    }
+    measurements: measurementDraft()
   });
 
   // Fetch outfit data
   useEffect(() => {
+    let active = true;
     const fetchOutfit = async () => {
+      setLoading(true);
+      setLoadError("");
       try {
         const outfitDoc = await getDoc(doc(db, "outfits", id));
+        if (!active) return;
         if (outfitDoc.exists()) {
           const data = outfitDoc.data();
           setOutfit(data);
@@ -73,58 +86,51 @@ const OutfitDetails = () => {
             amount: data.amount || "",
             status: data.status || "Pending",
             notes: data.notes || "",
-            measurements: {
-              chest: data.measurements?.chest || "",
-              waist: data.measurements?.waist || "",
-              hip: data.measurements?.hip || "",
-              sleeve: data.measurements?.sleeve || "",
-              length: data.measurements?.length || "",
-              notes: data.measurements?.notes || ""
-            }
+            measurements: measurementDraft(data.measurements)
           });
         } else {
-          alert("Outfit not found");
-          navigate("/outfits");
+          setLoadError("This order could not be found.");
         }
       } catch (error) {
         console.error("Error fetching outfit:", error);
-        alert("Failed to load outfit");
+        if (active) setLoadError("We couldn’t load this order. Check your connection and try again.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchOutfit();
-  }, [id, navigate]);
+    return () => { active = false; };
+  }, [id, loadAttempt]);
 
   // Update outfit
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaveError("");
+    setSaveNotice("");
     setSaving(true);
     const becameDelivered = outfit?.status !== "Delivered" && formData.status === "Delivered";
 
     try {
-      await updateDoc(doc(db, "outfits", id), {
+      const changes = {
         clientName: formData.clientName,
         outfitType: formData.outfitType,
         status: formData.status,
         dueDate: formData.dueDate,
         amount: Number(formData.amount),
         notes: formData.notes,
-        measurements: {
-          chest: Number(formData.measurements.chest) || 0,
-          waist: Number(formData.measurements.waist) || 0,
-          hip: Number(formData.measurements.hip) || 0,
-          sleeve: Number(formData.measurements.sleeve) || 0,
-          length: Number(formData.measurements.length) || 0,
-          notes: formData.measurements.notes || ""
-        }
-      });
-
+        ...(measurementsChanged(formData.measurements, outfit.measurements) ? {
+          measurements: measurementPayload(formData.measurements, outfit.measurements),
+          measurementsUpdatedAt: new Date().toISOString(),
+        } : {})
+      };
+      await updateDoc(doc(db, "outfits", id), changes);
+      setOutfit({ ...outfit, ...changes });
+      setFormData(current => ({ ...current, measurements: measurementDraft(changes.measurements ?? outfit.measurements) }));
       setEditMode(false);
-      // Refresh outfit data
-      const outfitDoc = await getDoc(doc(db, "outfits", id));
-      setOutfit(outfitDoc.data());
+      setSaveNotice("Order updated successfully.");
 
       if (becameDelivered && auth.currentUser) {
         try {
@@ -152,18 +158,19 @@ const OutfitDetails = () => {
         }
       }
 
-      alert("Outfit updated successfully!");
+
     } catch (error) {
       console.error("Error updating outfit:", error);
-      alert("Failed to update outfit");
+      setSaveError("Could not save this order. Your edits are still here. Please try again.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   // Delete outfit
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this outfit?")) {
+    if (!window.confirm("Are you sure you want to delete this order?")) {
       return;
     }
 
@@ -172,7 +179,7 @@ const OutfitDetails = () => {
       navigate("/outfits");
     } catch (error) {
       console.error("Error deleting outfit:", error);
-      alert("Failed to delete outfit");
+      alert("We couldn’t delete this order. Please try again.");
     }
   };
 
@@ -202,36 +209,48 @@ const OutfitDetails = () => {
 
   if (loading) {
     return (
-      <div className="w-full max-w-4xl mx-auto py-10 text-center text-gray-500">
-        <div className="animate-pulse">Loading outfit details...</div>
+      <div role="status" className="w-full max-w-4xl mx-auto py-10 text-center text-gray-300">
+        <div className="animate-pulse">Loading order details…</div>
       </div>
     );
   }
 
+  if (loadError || !outfit) {
+    return <div role="alert" className="mx-auto w-full max-w-4xl rounded-xl border border-gray-800 bg-gray-900 p-6 text-center">
+      <h1 className="text-xl font-bold text-white">Order unavailable</h1>
+      <p className="mt-3 text-sm text-gray-300">{loadError || "This order could not be found."}</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
+        <button type="button" onClick={() => setLoadAttempt((value) => value + 1)} className="min-h-11 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-500">Try again</button>
+        <button type="button" onClick={() => navigate("/outfits")} className="min-h-11 rounded-lg border border-gray-700 px-4 text-sm font-semibold text-gray-200 hover:bg-gray-800">Back to Orders</button>
+      </div>
+    </div>;
+  }
+
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <div className="measurement-order w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      {saveNotice && <p role="status" className="rounded-lg border border-green-800 bg-green-900/20 p-3 text-sm text-green-200">{saveNotice}</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <button 
           onClick={() => navigate("/outfits")}
-          className="flex items-center text-gray-400 hover:text-white transition text-sm sm:text-base self-start"
+          className="min-h-11 flex items-center text-gray-300 hover:text-white transition text-sm sm:text-base self-start"
         >
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          Back to Outfits
+          Back to Orders
         </button>
         <div className="flex gap-2">
           {!editMode ? (
             <>
               <button
                 onClick={() => setEditMode(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white min-h-11 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
               >
                 <Edit className="w-4 h-4" />
                 Edit
               </button>
               <button
                 onClick={handleDelete}
-                className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
+                className="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-700 min-h-11 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition active:scale-95"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
@@ -249,17 +268,10 @@ const OutfitDetails = () => {
                   amount: outfit.amount || "",
                   status: outfit.status || "Pending",
                   notes: outfit.notes || "",
-                  measurements: {
-                    chest: outfit.measurements?.chest || "",
-                    waist: outfit.measurements?.waist || "",
-                    hip: outfit.measurements?.hip || "",
-                    sleeve: outfit.measurements?.sleeve || "",
-                    length: outfit.measurements?.length || "",
-                    notes: outfit.measurements?.notes || ""
-                  }
+                  measurements: measurementDraft(outfit.measurements)
                 });
               }}
-              className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95"
+              className="bg-gray-800 hover:bg-gray-700 text-white min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95"
             >
               Cancel
             </button>
@@ -315,90 +327,19 @@ const OutfitDetails = () => {
                 <Ruler className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
                 <h2 className="text-lg sm:text-xl font-bold text-white">Measurements</h2>
               </div>
-              {(!outfit.measurements || Object.values(outfit.measurements).every(v => !v || v === 0)) && (
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 transition"
-                >
-                  + Add Measurements
-                </button>
-              )}
+                {!hasMeasurements(outfit.measurements) && <button onClick={() => setEditMode(true)} className="min-h-11 rounded-lg px-3 text-sm text-indigo-300">Add measurements</button>}
             </div>
-
-            {outfit.measurements && (Object.values(outfit.measurements).some(v => v && v !== 0)) ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {outfit.measurements.chest > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Chest</p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {outfit.measurements.chest}"
-                      </p>
-                    </div>
-                  )}
-                  {outfit.measurements.waist > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Waist</p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {outfit.measurements.waist}"
-                      </p>
-                    </div>
-                  )}
-                  {outfit.measurements.hip > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Hip</p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {outfit.measurements.hip}"
-                      </p>
-                    </div>
-                  )}
-                  {outfit.measurements.sleeve > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Sleeve</p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {outfit.measurements.sleeve}"
-                      </p>
-                    </div>
-                  )}
-                  {outfit.measurements.length > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Length</p>
-                      <p className="text-base sm:text-lg font-semibold text-white">
-                        {outfit.measurements.length}"
-                      </p>
-                    </div>
-                  )}
-                </div>
-                {outfit.measurements.notes && (
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Notes</p>
-                    <p className="text-sm text-gray-300">{outfit.measurements.notes}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Ruler className="w-12 h-12 sm:w-16 sm:h-16 text-gray-700 mx-auto mb-3" />
-                <p className="text-sm sm:text-base text-gray-500 mb-3">No measurements added yet</p>
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition inline-flex items-center gap-2"
-                >
-                  <Ruler className="w-4 h-4" />
-                  Add Measurements
-                </button>
-              </div>
-            )}
+            <MeasurementValues measurements={outfit.measurements} />
           </div>
         </div>
       ) : (
         /* Edit Mode */
-        <form onSubmit={handleUpdate} className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+        <form onSubmit={handleUpdate} aria-busy={saving} className="bg-gray-900 border border-gray-800 rounded-lg sm:rounded-xl p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
           {/* Outfit Details Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Scissors className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-lg sm:text-xl font-bold text-white">Outfit Details</h2>
+              <h1 className="text-lg sm:text-xl font-bold text-white">Edit order</h1>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -495,91 +436,9 @@ const OutfitDetails = () => {
               <h2 className="text-lg sm:text-xl font-bold text-white">Measurements</h2>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">Chest (inches)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.chest}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    measurements: {...formData.measurements, chest: e.target.value}
-                  })}
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">Waist (inches)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.waist}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    measurements: {...formData.measurements, waist: e.target.value}
-                  })}
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">Hip (inches)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.hip}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    measurements: {...formData.measurements, hip: e.target.value}
-                  })}
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">Sleeve (inches)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.sleeve}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    measurements: {...formData.measurements, sleeve: e.target.value}
-                  })}
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-400">Length (inches)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.measurements.length}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    measurements: {...formData.measurements, length: e.target.value}
-                  })}
-                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium text-gray-400">Measurement Notes</label>
-              <textarea
-                rows="2"
-                value={formData.measurements.notes}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  measurements: {...formData.measurements, notes: e.target.value}
-                })}
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              ></textarea>
-            </div>
+            <MeasurementFields value={formData.measurements} legacy={Object.hasOwn(outfit.measurements || {}, "length")} disabled={saving} onChange={measurements => setFormData(current => ({ ...current, measurements }))} />
           </div>
+          {saveError && <p role="alert" className="rounded-lg border border-red-800 bg-red-900/20 p-3 text-sm text-red-200">{saveError}</p>}
 
           {/* Save Button */}
           <div className="pt-4">
